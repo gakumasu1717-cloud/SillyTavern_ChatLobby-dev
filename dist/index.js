@@ -706,14 +706,10 @@
             return;
         }
 
-        // 확인창
-        if (!confirm('새 채팅을 시작하시겠습니까?')) {
-            return;
-        }
-
         closeLobby();
         await selectCharacterByIndex(parseInt(charIndex));
 
+        // SillyTavern의 새 채팅 버튼 클릭 (자체 확인창 있음)
         setTimeout(() => {
             const newChatBtn = document.getElementById('option_start_new_chat');
             if (newChatBtn) {

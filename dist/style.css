@@ -77,10 +77,11 @@
 #chat-lobby-persona-bar {
     display: flex;
     align-items: center;
-    padding: 10px 20px;
+    padding: 12px 20px 15px 20px;
     background: var(--SmartThemeBlurTintColor, rgba(15, 15, 15, 0.98));
     border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
     gap: 15px;
+    min-height: 95px;
 }
 
 .persona-label {
