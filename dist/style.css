@@ -60,8 +60,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 25px;
-    background: var(--SmartThemeBlurTintColor, rgba(20, 20, 20, 0.98));
+    padding: 18px 25px;
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.98) 0%, rgba(20, 20, 20, 0.98) 100%);
     border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
     gap: 15px;
 }
@@ -69,8 +69,10 @@
 #chat-lobby-header h2 {
     margin: 0;
     color: var(--SmartThemeBodyColor, #fff);
-    font-size: 1.5em;
+    font-size: 1.4em;
+    font-weight: 600;
     flex-shrink: 0;
+    letter-spacing: 0.5px;
 }
 
 /* 페르소나 가로 스크롤 바 */
@@ -346,8 +348,9 @@
 }
 
 .lobby-chat-item:hover {
-    background: rgba(106, 159, 181, 0.15);
+    background: rgba(106, 159, 181, 0.12);
     border-color: var(--SmartThemeQuoteColor, #6a9fb5);
+    transform: translateX(3px);
 }
 
 .lobby-chat-item .chat-name {
@@ -369,10 +372,17 @@
 
 .lobby-chat-item .chat-meta {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 8px;
     color: var(--SmartThemeQuoteColor, #666);
     font-size: 0.75em;
+}
+
+.lobby-chat-item .chat-meta span {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 /* 빈 상태 */

@@ -35,7 +35,7 @@
         <div id="chat-lobby-overlay" style="display: none;">
             <div id="chat-lobby-container">
                 <div id="chat-lobby-header">
-                    <h2>💬 Chat Lobby</h2>
+                    <h2>Chat Lobby</h2>
                     <button id="chat-lobby-close">✕</button>
                 </div>
                 <div id="chat-lobby-persona-bar">
@@ -323,18 +323,30 @@
         if (chat.last_mes) lastDate = formatDate(chat.last_mes);
         else if (chat.last_message_date) lastDate = formatDate(chat.last_message_date);
         else if (chat.date) lastDate = formatDate(chat.date);
+        else {
+            // 파일명에서 날짜 추출 (YYYY-MM-DD)
+            const dateMatch = fileName.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (dateMatch) {
+                lastDate = `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`;
+            }
+        }
         
         const fileSize = chat.file_size ? formatFileSize(chat.file_size) : '';
         const safeAvatar = (characterAvatar || '').replace(/"/g, '&quot;');
+        
+        // 메타 정보 구성
+        const metaItems = [];
+        if (messageCount > 0) metaItems.push(`💬 ${messageCount}개`);
+        if (fileSize) metaItems.push(`📄 ${fileSize}`);
+        if (lastDate) metaItems.push(`📅 ${lastDate}`);
 
         return `
         <div class="lobby-chat-item" data-file-name="${escapeHtml(fileName)}" data-char-avatar="${safeAvatar}" data-chat-index="${chatIndex}">
             <div class="chat-content">
                 <div class="chat-name">${escapeHtml(displayName)}</div>
-                <div class="chat-preview">${escapeHtml(truncateText(preview, 100))}</div>
+                <div class="chat-preview">${escapeHtml(truncateText(preview, 80))}</div>
                 <div class="chat-meta">
-                    ${messageCount > 0 ? `<span>💬 ${messageCount}개</span>` : '<span></span>'}
-                    <span>${lastDate} ${fileSize}</span>
+                    ${metaItems.length > 0 ? metaItems.map(item => `<span>${item}</span>`).join('') : '<span>정보 없음</span>'}
                 </div>
             </div>
             <button class="chat-delete-btn" title="채팅 삭제">🗑️</button>
