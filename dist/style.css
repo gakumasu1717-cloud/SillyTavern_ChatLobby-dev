@@ -120,11 +120,11 @@
     padding: 5px;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease-out;
     border: 3px solid transparent;
     flex-shrink: 0;
-    gap: 4px;
-    min-width: 60px;
+    gap: 3px;
+    min-width: 70px;
 }
 
 .persona-item:hover {
@@ -140,8 +140,8 @@
 }
 
 .persona-avatar {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     object-fit: cover;
     background: var(--SmartThemeBorderColor, #333);
@@ -152,13 +152,14 @@
 }
 
 .persona-name {
-    font-size: 0.75em;
+    font-size: 0.65em;
     color: var(--SmartThemeBodyColor, #ccc);
-    max-width: 60px;
+    max-width: 65px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: center;
+    opacity: 0.85;
 }
 
 .persona-empty {
@@ -372,6 +373,25 @@
     justify-content: center;
     height: 100%;
     color: var(--SmartThemeQuoteColor, #888);
+    animation: fadeIn 0.15s ease-out;
+}
+
+/* 부드러운 페이드인 애니메이션 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 컨텐츠 로드 시 부드러운 전환 */
+.lobby-char-card,
+.lobby-chat-item,
+.persona-item {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* 오버레이 열릴 때 부드럽게 */
+#chat-lobby-overlay {
+    animation: fadeIn 0.2s ease-out;
 }
 
 /* 스크롤바 스타일 */

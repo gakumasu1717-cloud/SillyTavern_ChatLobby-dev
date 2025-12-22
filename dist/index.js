@@ -112,9 +112,25 @@
                 return { key: avatarId, name: name };
             });
             
-            // ㄱㄴㄷ/ABC 순 정렬 (한국어 로케일 적용)
+            // 숫자 → 영문 → 한글 순 정렬
             personas.sort((a, b) => {
-                return a.name.localeCompare(b.name, 'ko');
+                const aName = a.name.toLowerCase();
+                const bName = b.name.toLowerCase();
+                
+                // 첫 글자 타입 판별 (숫자=0, 영문=1, 한글=2, 기타=3)
+                const getType = (str) => {
+                    const c = str.charAt(0);
+                    if (/[0-9]/.test(c)) return 0;
+                    if (/[a-z]/.test(c)) return 1;
+                    if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(c)) return 2;
+                    return 3;
+                };
+                
+                const typeA = getType(aName);
+                const typeB = getType(bName);
+                
+                if (typeA !== typeB) return typeA - typeB;
+                return aName.localeCompare(bName, 'ko');
             });
             
             console.log('[Chat Lobby] Final sorted personas:', personas);
