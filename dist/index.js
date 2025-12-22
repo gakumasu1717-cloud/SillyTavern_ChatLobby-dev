@@ -112,11 +112,9 @@
                 return { key: avatarId, name: name };
             });
             
-            // SillyTavern 설정과 동일하게 이름순 정렬
+            // ㄱㄴㄷ/ABC 순 정렬 (한국어 로케일 적용)
             personas.sort((a, b) => {
-                return sortOrder === 'asc' 
-                    ? a.name.localeCompare(b.name) 
-                    : b.name.localeCompare(a.name);
+                return a.name.localeCompare(b.name, 'ko');
             });
             
             console.log('[Chat Lobby] Final sorted personas:', personas);
@@ -146,13 +144,14 @@
         
         console.log('[Chat Lobby] Current persona:', currentPersona);
         
-        // 모든 페르소나 아바타만 표시
+        // 모든 페르소나 아바타 + 이름 표시
         let html = '';
         personas.forEach(persona => {
             const isSelected = persona.key === currentPersona ? 'selected' : '';
             const avatarUrl = `/User Avatars/${encodeURIComponent(persona.key)}`;
-            html += `<div class="persona-item ${isSelected}" data-persona="${escapeHtml(persona.key)}" title="${escapeHtml(persona.key)}">
+            html += `<div class="persona-item ${isSelected}" data-persona="${escapeHtml(persona.key)}" title="${escapeHtml(persona.name)}">
                 <img class="persona-avatar" src="${avatarUrl}" alt="" onerror="this.outerHTML='<div class=persona-avatar>👤</div>'">
+                <span class="persona-name">${escapeHtml(persona.name)}</span>
             </div>`;
         });
         
