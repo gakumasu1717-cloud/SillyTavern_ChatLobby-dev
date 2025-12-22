@@ -1,5 +1,35 @@
 /* Chat Lobby Styles */
 
+/* FAB 버튼 (플로팅 버튼) - overlay 밖에 위치 */
+#chat-lobby-fab {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--SmartThemeQuoteColor, #6a9fb5);
+    color: #fff;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 99999;
+    pointer-events: auto;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#chat-lobby-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+#chat-lobby-fab:active {
+    transform: scale(0.95);
+}
+
 #chat-lobby-overlay {
     position: fixed;
     top: 0;
@@ -24,32 +54,6 @@
     flex-direction: column;
     overflow: hidden;
     pointer-events: auto;
-}
-
-/* FAB 버튼 (플로팅 버튼) */
-#chat-lobby-fab {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--SmartThemeQuoteColor, #6a9fb5);
-    color: #fff;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    z-index: 999999;
-    pointer-events: auto;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-#chat-lobby-fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
 }
 
 #chat-lobby-header {
@@ -421,13 +425,14 @@
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
-    /* FAB 버튼 위치 조정 - 메뉴 안 가리게 */
+    /* FAB 버튼 위치 조정 - 모바일에서도 항상 보이게 */
     #chat-lobby-fab {
-        bottom: 20px;
-        right: 15px;
-        width: 50px;
-        height: 50px;
+        bottom: 70px;
+        right: 10px;
+        width: 48px;
+        height: 48px;
         font-size: 20px;
+        z-index: 99999;
     }
     
     /* 헤더 작게 */
@@ -497,6 +502,32 @@
     
     #chat-lobby-new-chat {
         padding: 6px 10px;
+        font-size: 0.8em;
+    }
+}
+
+/* 더 작은 화면 */
+@media (max-width: 480px) {
+    #chat-lobby-fab {
+        bottom: 60px;
+        right: 8px;
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
+    
+    #chat-lobby-characters {
+        grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+        gap: 8px;
+        padding: 8px;
+    }
+    
+    .lobby-char-avatar {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .lobby-char-name {
         font-size: 0.8em;
     }
 }

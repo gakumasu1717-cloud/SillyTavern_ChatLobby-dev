@@ -31,6 +31,7 @@
     // 로비 UI HTML
     function createLobbyHTML() {
         return `
+        <div id="chat-lobby-fab" title="Chat Lobby 열기">💬</div>
         <div id="chat-lobby-overlay" style="display: none;">
             <div id="chat-lobby-container">
                 <div id="chat-lobby-header">
@@ -69,7 +70,6 @@
                     </div>
                 </div>
             </div>
-            <div id="chat-lobby-fab" title="Chat Lobby 열기">💬</div>
         </div>
         `;
     }
@@ -474,10 +474,10 @@
             // 캐릭터 선택
             await selectCharacterByIndex(charIndex);
 
-            // 채팅 열기
+            // 채팅 열기 - 딜레이 최소화
             setTimeout(async () => {
                 await openChatByIndex(chatIndex, charAvatar);
-            }, 600);
+            }, 300);
 
         } catch (error) {
             console.error('[Chat Lobby] Failed to open chat:', error);
@@ -508,13 +508,13 @@
             if (manageChatsBtn) {
                 manageChatsBtn.click();
 
-                // 채팅 목록에서 해당 채팅 선택
+                // 채팅 목록에서 해당 채팅 선택 - 딜레이 최소화
                 setTimeout(() => {
                     const chatItems = document.querySelectorAll('.select_chat_block');
                     if (chatItems[chatIndex]) {
                         chatItems[chatIndex].click();
                     }
-                }, 400);
+                }, 200);
             }
         } catch (error) {
             console.error('[Chat Lobby] Failed to open specific chat:', error);
@@ -525,8 +525,9 @@
     async function startNewChat() {
         const btn = document.getElementById('chat-lobby-new-chat');
         const charIndex = btn.dataset.charIndex;
+        const charAvatar = btn.dataset.charAvatar;
 
-        if (!charIndex) {
+        if (!charIndex || !charAvatar) {
             console.error('[Chat Lobby] No character selected');
             return;
         }
@@ -539,7 +540,7 @@
             if (newChatBtn) {
                 newChatBtn.click();
             }
-        }, 500);
+        }, 300);
     }
 
     // 로비 열기
