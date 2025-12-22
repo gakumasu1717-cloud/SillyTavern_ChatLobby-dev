@@ -162,42 +162,64 @@
             
             console.log('[Chat Lobby] Changing persona to:', personaKey);
             
-            // 방법 1: SillyTavern personas 모듈 직접 import
+            // 방법 1: SillyTavern personas 모듈 직접 import 후 setUserAvatar 호출
             try {
                 const personasModule = await import('../../../personas.js');
                 if (typeof personasModule.setUserAvatar === 'function') {
-                    await personasModule.setUserAvatar(personaKey);
-                    console.log('[Chat Lobby] Persona changed via import');
+                    await personasModule.setUserAvatar(personaKey, { toastPersonaNameChange: true });
+                    console.log('[Chat Lobby] Persona changed via setUserAvatar import');
+                    // UI 업데이트를 위해 페르소나 선택 상태 갱신
+                    setTimeout(() => updatePersonaSelect(), 500);
                     return;
                 }
             } catch (e) {
-                console.log('[Chat Lobby] Could not import personas module:', e);
+                console.log('[Chat Lobby] Could not use setUserAvatar:', e);
             }
             
-            // 방법 2: jQuery 이벤트 트리거 (SillyTavern이 사용하는 방식)
-            const $avatarBlock = $(`#user_avatar_block .avatar-container[data-avatar-id="${personaKey}"]`);
-            if ($avatarBlock.length > 0) {
-                $avatarBlock.trigger('click');
-                console.log('[Chat Lobby] Persona changed via jQuery trigger');
-                return;
+            // 방법 2: 슬래시 커맨드 사용 (/persona)
+            try {
+                const slashModule = await import('../../../slash-commands.js');
+                if (slashModule.executeSlashCommands) {
+                    await slashModule.executeSlashCommands(`/persona ${personaKey}`);
+                    console.log('[Chat Lobby] Persona changed via slash command');
+                    setTimeout(() => updatePersonaSelect(), 500);
+                    return;
+                }
+            } catch (e) {
+                console.log('[Chat Lobby] Could not use slash command:', e);
             }
             
-            // 방법 3: 네이티브 클릭 이벤트
+            // 방법 3: jQuery 이벤트 트리거 (SillyTavern이 사용하는 방식)
+            if (typeof $ !== 'undefined') {
+                const $avatarBlock = $(`#user_avatar_block .avatar-container[data-avatar-id="${personaKey}"]`);
+                if ($avatarBlock.length > 0) {
+                    $avatarBlock.trigger('click');
+                    console.log('[Chat Lobby] Persona changed via jQuery trigger');
+                    setTimeout(() => updatePersonaSelect(), 500);
+                    return;
+                }
+            }
+            
+            // 방법 4: 네이티브 클릭 이벤트
             const avatarElement = document.querySelector(`#user_avatar_block .avatar-container[data-avatar-id="${personaKey}"]`);
             if (avatarElement) {
                 avatarElement.click();
                 console.log('[Chat Lobby] Persona changed via native click');
+                setTimeout(() => updatePersonaSelect(), 500);
                 return;
             }
             
-            // 방법 4: SillyTavern context
+            // 방법 5: SillyTavern context
             if (typeof window.SillyTavern?.getContext?.()?.setUserAvatar === 'function') {
                 await window.SillyTavern.getContext().setUserAvatar(personaKey);
                 console.log('[Chat Lobby] Persona changed via context');
+                setTimeout(() => updatePersonaSelect(), 500);
                 return;
             }
             
             console.warn('[Chat Lobby] All persona change methods failed for:', personaKey);
+            // 알림 표시
+            alert('페르소나 변경에 실패했습니다. 페르소나 패널에서 직접 선택해주세요.');
             
         } catch (error) {
             console.error('[Chat Lobby] Failed to change persona:', error);
