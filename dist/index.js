@@ -148,8 +148,15 @@
         container.innerHTML = '<div class="lobby-loading">로딩 중...</div>';
         
         const personas = await loadPersonas();
-        const context = window.SillyTavern?.getContext?.() || {};
-        const currentPersona = context.user_avatar || '';
+        
+        // 현재 페르소나 가져오기 - personas.js에서 직접 import
+        let currentPersona = '';
+        try {
+            const personasModule = await import('../../../../personas.js');
+            currentPersona = personasModule.user_avatar || '';
+        } catch (e) {
+            console.log('[Chat Lobby] Could not get user_avatar:', e);
+        }
 
         if (personas.length === 0) {
             container.innerHTML = '<div class="persona-empty">페르소나 없음</div>';
