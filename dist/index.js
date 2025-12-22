@@ -455,11 +455,19 @@
         chatsList.innerHTML = '<div class="lobby-loading">채팅 로딩 중...</div>';
 
         const chats = await loadChatsForCharacter(charAvatar);
+        
+        // 채팅이 없는 경우 체크 (빈 배열, 빈 객체, error 응답 등)
+        const hasNoChats = !chats || 
+            (Array.isArray(chats) && chats.length === 0) || 
+            (typeof chats === 'object' && !Array.isArray(chats) && (Object.keys(chats).length === 0 || chats.error === true));
+        
+        console.log('[Chat Lobby] hasNoChats:', hasNoChats, 'chats:', chats);
 
-        if (!chats || (Array.isArray(chats) && chats.length === 0) || (typeof chats === 'object' && Object.keys(chats).length === 0)) {
+        if (hasNoChats) {
             document.getElementById('chat-panel-count').textContent = '채팅 없음';
             // 채팅이 없음을 표시
             document.getElementById('chat-lobby-new-chat').dataset.hasChats = 'false';
+            console.log('[Chat Lobby] Set hasChats = false');
             chatsList.innerHTML = `
                 <div class="lobby-empty-state">
                     <i>💬</i>
@@ -472,6 +480,7 @@
         
         // 채팅이 있음을 표시
         document.getElementById('chat-lobby-new-chat').dataset.hasChats = 'true';
+        console.log('[Chat Lobby] Set hasChats = true');
 
         // 채팅 목록을 배열로 변환
         let chatArray = [];
