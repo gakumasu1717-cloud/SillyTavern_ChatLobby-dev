@@ -385,7 +385,10 @@
             const avatarImg = item.querySelector('.persona-avatar');
             if (avatarImg) {
                 avatarImg.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log('[Chat Lobby] Persona avatar clicked, opening management');
                     openPersonaManagement();
                 });
                 avatarImg.style.cursor = 'pointer';
@@ -395,6 +398,7 @@
             const nameSpan = item.querySelector('.persona-name');
             if (nameSpan) {
                 nameSpan.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                     item.classList.add('selected');
@@ -407,6 +411,7 @@
             item.addEventListener('click', (e) => {
                 if (e.target.classList.contains('persona-delete-btn')) return;
                 if (e.target.classList.contains('persona-avatar')) return;
+                if (e.target.tagName === 'IMG') return; // img 태그도 제외
                 container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
                 changePersona(item.dataset.persona);
@@ -455,12 +460,17 @@
     // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
     async function openPersonaManagement() {
         closeLobby();
-        setTimeout(() => {
-            const personaDrawer = document.getElementById('persona-management-button');
-            if (personaDrawer) {
-                personaDrawer.click();
-            }
-        }, 100);
+        // 딥레이를 위한 초기 딥레이
+        await new Promise(resolve => setTimeout(resolve, 150));
+        
+        // 페르소나 관리 버튼 클릭 (SillyTavern ID: persona-management-button)
+        const personaBtn = document.getElementById('persona-management-button');
+        if (personaBtn) {
+            console.log('[Chat Lobby] Opening persona management');
+            personaBtn.click();
+        } else {
+            console.log('[Chat Lobby] persona-management-button not found');
+        }
     }
 
     // 페르소나 변경
@@ -1657,27 +1667,21 @@
             }
         });
         
-        // 봇 프사 클릭 시 캐릭터 편집 화면으로 이동
+        // 봇 프사 클릭 시 캐릭터 정보/편집 화면으로 이동 (설명, 인사말 등)
         document.getElementById('chat-panel-avatar').addEventListener('click', async () => {
             const selectedCard = document.querySelector('.lobby-char-card.selected');
             if (selectedCard) {
                 const charIndex = selectedCard.dataset.charIndex;
                 closeLobby();
                 await selectCharacterByIndex(parseInt(charIndex));
-                // 캐릭터 선택 후 우측 패널 편집 화면 열기
+                // 캐릭터 선택 후 우측 패널의 캐릭터 정보 화면 열기
                 setTimeout(() => {
-                    // SillyTavern의 캐릭터 편집 패널 열기
-                    const characterPopup = document.getElementById('character_popup');
-                    if (characterPopup) {
-                        characterPopup.style.display = 'flex';
-                        characterPopup.classList.add('open');
+                    // 우측 drawer 열기
+                    const rightDrawer = document.getElementById('rightNavDrawerIcon');
+                    if (rightDrawer) {
+                        rightDrawer.click();
                     }
-                    // 또는 rm_button_selected_ch 클릭
-                    const selectedChBtn = document.getElementById('rm_button_selected_ch');
-                    if (selectedChBtn) {
-                        selectedChBtn.click();
-                    }
-                }, 400);
+                }, 300);
             }
         });
         
@@ -1712,14 +1716,24 @@
         });
         
         // 페르소나 추가 버튼 - 파일 선택으로 페르소나 추가 (로비 열린 상태)
-        document.getElementById('chat-lobby-add-persona').addEventListener('click', () => {
+        document.getElementById('chat-lobby-add-persona').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Chat Lobby] Add persona button clicked');
+            
             // 파일 input 생성하여 이미지 선택
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = 'image/*';
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            fileInput.addEventListener('change', async (evt) => {
+                const file = evt.target.files[0];
+                if (!file) {
+                    document.body.removeChild(fileInput);
+                    return;
+                }
                 
                 try {
                     const formData = new FormData();
@@ -1743,6 +1757,7 @@
                     console.error('[Chat Lobby] Error uploading persona:', error);
                     alert('페르소나 추가 중 오류가 발생했습니다.');
                 }
+                document.body.removeChild(fileInput);
             });
             fileInput.click();
         });
