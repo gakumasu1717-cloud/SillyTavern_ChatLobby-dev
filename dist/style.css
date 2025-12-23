@@ -95,6 +95,16 @@
     border-color: var(--SmartThemeQuoteColor, #6a9fb5);
 }
 
+/* 새로고침 버튼 */
+#chat-lobby-refresh:hover {
+    animation: spin 0.5s ease;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 #chat-lobby-close {
     font-size: 1.3em !important;
     padding: 6px 12px !important;
@@ -208,6 +218,14 @@
     align-items: center;
     justify-content: center;
     font-size: 1.5em;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.persona-avatar:hover {
+    border-color: var(--SmartThemeQuoteColor, #6a9fb5);
+    transform: scale(1.08);
+    box-shadow: 0 0 8px rgba(106, 159, 181, 0.5);
 }
 
 .persona-name {
@@ -218,6 +236,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: center;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.persona-name:hover {
+    background: rgba(255, 255, 255, 0.15);
     opacity: 0.85;
 }
 

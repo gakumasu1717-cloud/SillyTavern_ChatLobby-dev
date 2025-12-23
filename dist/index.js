@@ -194,6 +194,7 @@
                 <div id="chat-lobby-header">
                     <h2>Chat Lobby</h2>
                     <div class="header-actions">
+                        <button id="chat-lobby-refresh" title="새로고침">🔄</button>
                         <button id="chat-lobby-import-char" title="캐릭터 임포트">📥</button>
                         <button id="chat-lobby-add-persona" title="페르소나 추가">👤</button>
                         <button id="chat-lobby-close">✕</button>
@@ -378,11 +379,34 @@
         
         container.innerHTML = html;
         
-        // 클릭 이벤트 - 페르소나 선택
+        // 클릭 이벤트 - 페르소나 선택 / 아바타 클릭 시 페르소나 관리
         container.querySelectorAll('.persona-item').forEach(item => {
+            // 아바타 이미지 클릭 → 페르소나 관리 화면
+            const avatarImg = item.querySelector('.persona-avatar');
+            if (avatarImg) {
+                avatarImg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openPersonaManagement();
+                });
+                avatarImg.style.cursor = 'pointer';
+            }
+            
+            // 이름 클릭 → 페르소나 선택
+            const nameSpan = item.querySelector('.persona-name');
+            if (nameSpan) {
+                nameSpan.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    changePersona(item.dataset.persona);
+                });
+                nameSpan.style.cursor = 'pointer';
+            }
+            
+            // 전체 아이템 클릭 → 페르소나 선택 (삭제 버튼, 아바타 제외)
             item.addEventListener('click', (e) => {
-                // 삭제 버튼 클릭은 무시
                 if (e.target.classList.contains('persona-delete-btn')) return;
+                if (e.target.classList.contains('persona-avatar')) return;
                 container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
                 changePersona(item.dataset.persona);
@@ -402,40 +426,41 @@
         console.log('[Chat Lobby] Persona list updated with', personas.length, 'items');
     }
 
-    // 페르소나 삭제
+    // 페르소나 삭제 (로비 열린 상태에서 API로 직접 삭제)
     async function deletePersona(personaKey, personaName) {
         if (!confirm(`"${personaName}" 페르소나를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return;
         
         try {
-            // 페르소나 관리 열고 해당 페르소나 선택 후 삭제
-            closeLobby();
-            setTimeout(() => {
-                const personaDrawer = document.getElementById('persona-management-button');
-                if (personaDrawer) {
-                    personaDrawer.click();
-                    setTimeout(() => {
-                        // 해당 페르소나 아바타 클릭하여 선택
-                        const avatarItems = document.querySelectorAll('#user_avatar_block .avatar-container');
-                        for (const item of avatarItems) {
-                            const img = item.querySelector('img');
-                            if (img && img.src.includes(encodeURIComponent(personaKey))) {
-                                item.click();
-                                // 삭제 버튼 클릭 (SillyTavern ID: persona_delete_button)
-                                setTimeout(() => {
-                                    const deleteBtn = document.getElementById('persona_delete_button');
-                                    if (deleteBtn) {
-                                        deleteBtn.click();
-                                    }
-                                }, 300);
-                                break;
-                            }
-                        }
-                    }, 400);
-                }
-            }, 100);
+            // API로 직접 페르소나 삭제
+            const response = await fetch('/api/avatars/delete', {
+                method: 'POST',
+                headers: getRequestHeaders(),
+                body: JSON.stringify({ avatar: personaKey })
+            });
+            
+            if (response.ok) {
+                console.log('[Chat Lobby] Persona deleted:', personaKey);
+                // 페르소나 목록 새로고침
+                await updatePersonaSelect();
+            } else {
+                console.error('[Chat Lobby] Failed to delete persona:', response.status);
+                alert('페르소나 삭제에 실패했습니다.');
+            }
         } catch (error) {
             console.error('[Chat Lobby] Failed to delete persona:', error);
+            alert('페르소나 삭제 중 오류가 발생했습니다.');
         }
+    }
+    
+    // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
+    async function openPersonaManagement() {
+        closeLobby();
+        setTimeout(() => {
+            const personaDrawer = document.getElementById('persona-management-button');
+            if (personaDrawer) {
+                personaDrawer.click();
+            }
+        }, 100);
     }
 
     // 페르소나 변경
@@ -1639,11 +1664,31 @@
                 const charIndex = selectedCard.dataset.charIndex;
                 closeLobby();
                 await selectCharacterByIndex(parseInt(charIndex));
-                // 캐릭터 편집 버튼 클릭
+                // 캐릭터 선택 후 우측 패널 편집 화면 열기
                 setTimeout(() => {
-                    const editBtn = document.getElementById('character_popup_text_h3');
-                    if (editBtn) editBtn.click();
-                }, 300);
+                    // SillyTavern의 캐릭터 편집 패널 열기
+                    const characterPopup = document.getElementById('character_popup');
+                    if (characterPopup) {
+                        characterPopup.style.display = 'flex';
+                        characterPopup.classList.add('open');
+                    }
+                    // 또는 rm_button_selected_ch 클릭
+                    const selectedChBtn = document.getElementById('rm_button_selected_ch');
+                    if (selectedChBtn) {
+                        selectedChBtn.click();
+                    }
+                }, 400);
+            }
+        });
+        
+        // 새로고침 버튼
+        document.getElementById('chat-lobby-refresh').addEventListener('click', () => {
+            updateCharacterGrid();
+            updatePersonaSelect();
+            // 현재 선택된 캐릭터의 채팅도 새로고침
+            const selectedCard = document.querySelector('.lobby-char-card.selected');
+            if (selectedCard) {
+                selectCharacter(selectedCard);
             }
         });
         
@@ -1652,53 +1697,94 @@
             // 파일 input 직접 트리거 (SillyTavern ID: character_import_file)
             const fileInput = document.getElementById('character_import_file');
             if (fileInput) {
+                // 파일 선택 후 로비 새로고침을 위한 이벤트 리스너 추가
+                const refreshOnImport = () => {
+                    setTimeout(() => {
+                        updateCharacterGrid();
+                    }, 1000);
+                    fileInput.removeEventListener('change', refreshOnImport);
+                };
+                fileInput.addEventListener('change', refreshOnImport);
                 fileInput.click();
             } else {
                 console.log('[Chat Lobby] character_import_file not found');
             }
         });
         
-        // 페르소나 추가 버튼 (SillyTavern ID: persona-management-button, create_dummy_persona)
+        // 페르소나 추가 버튼 - 파일 선택으로 페르소나 추가 (로비 열린 상태)
         document.getElementById('chat-lobby-add-persona').addEventListener('click', () => {
-            closeLobby();
-            setTimeout(() => {
-                // 페르소나 관리 drawer 클릭 (SillyTavern ID: persona-management-button)
-                const personaDrawer = document.getElementById('persona-management-button');
-                if (personaDrawer) {
-                    personaDrawer.click();
-                    // Create 버튼 클릭 (SillyTavern ID: create_dummy_persona)
-                    setTimeout(() => {
-                        const createBtn = document.getElementById('create_dummy_persona');
-                        if (createBtn) {
-                            console.log('[Chat Lobby] Found create_dummy_persona');
-                            createBtn.click();
-                        } else {
-                            console.log('[Chat Lobby] create_dummy_persona not found');
-                        }
-                    }, 400);
-                } else {
-                    console.log('[Chat Lobby] persona-management-button not found');
+            // 파일 input 생성하여 이미지 선택
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+                    formData.append('overwrite_name', '');
+                    
+                    const response = await fetch('/api/avatars/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        console.log('[Chat Lobby] Persona uploaded');
+                        // 페르소나 목록 새로고침
+                        await updatePersonaSelect();
+                    } else {
+                        console.error('[Chat Lobby] Failed to upload persona:', response.status);
+                        alert('페르소나 추가에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('[Chat Lobby] Error uploading persona:', error);
+                    alert('페르소나 추가 중 오류가 발생했습니다.');
                 }
-            }, 100);
+            });
+            fileInput.click();
         });
         
-        // 캐릭터 삭제 버튼 (SillyTavern ID: delete_button)
+        // 캐릭터 삭제 버튼 - API로 직접 삭제 (로비 열린 상태)
         document.getElementById('chat-lobby-delete-char').addEventListener('click', async () => {
             const selectedCard = document.querySelector('.lobby-char-card.selected');
             if (!selectedCard) return;
             
             const charName = document.getElementById('chat-panel-name').textContent;
-            if (!confirm(`"${charName}" 캐릭터를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return;
+            const charAvatar = selectedCard.dataset.charAvatar;
             
-            const charIndex = selectedCard.dataset.charIndex;
-            closeLobby();
-            await selectCharacterByIndex(parseInt(charIndex));
-            setTimeout(() => {
-                const deleteBtn = document.getElementById('delete_button');
-                if (deleteBtn) {
-                    deleteBtn.click();
+            if (!confirm(`"${charName}" 캐릭터를 삭제하시겠습니까?\n\n모든 채팅 기록도 함께 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
+            
+            // 채팅도 삭제할지 추가 확인
+            const deleteChats = confirm('채팅 기록도 함께 삭제하시겠습니까?\n\n취소를 누르면 캐릭터만 삭제됩니다.');
+            
+            try {
+                const response = await fetch('/api/characters/delete', {
+                    method: 'POST',
+                    headers: getRequestHeaders(),
+                    body: JSON.stringify({
+                        avatar_url: charAvatar,
+                        delete_chats: deleteChats
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('[Chat Lobby] Character deleted:', charName);
+                    // 채팅 패널 닫기
+                    const chatsPanel = document.getElementById('chat-lobby-chats');
+                    if (chatsPanel) chatsPanel.classList.remove('visible');
+                    // 캐릭터 목록 새로고침
+                    await updateCharacterGrid();
+                } else {
+                    console.error('[Chat Lobby] Failed to delete character:', response.status);
+                    alert('캐릭터 삭제에 실패했습니다.');
                 }
-            }, 300);
+            } catch (error) {
+                console.error('[Chat Lobby] Error deleting character:', error);
+                alert('캐릭터 삭제 중 오류가 발생했습니다.');
+            }
         });
         
         // 폴더 필터 변경 - 데스크톱 + 모바일
