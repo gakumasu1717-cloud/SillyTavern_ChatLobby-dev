@@ -745,14 +745,22 @@
 }
 
 .chat-checkbox input {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     cursor: pointer;
     accent-color: var(--SmartThemeQuoteColor, #6a9fb5);
+    touch-action: manipulation;
 }
 
 #chat-lobby-chats-list.batch-mode .lobby-chat-item {
     padding-left: 10px;
+}
+
+/* 배치 모드에서 체크박스 영역 클릭 용이하게 */
+#chat-lobby-chats-list.batch-mode .chat-checkbox {
+    padding: 10px;
+    margin: -10px;
+    margin-right: 5px;
 }
 
 /* 배치 도구바 */
@@ -768,27 +776,35 @@
 #chat-lobby-batch-toolbar span {
     color: var(--SmartThemeBodyColor, #fff);
     font-size: 0.9em;
-    flex: 1;
+    flex-shrink: 0;
 }
 
 #chat-lobby-batch-toolbar select {
     background: var(--SmartThemeBlurTintColor, rgba(40, 40, 40, 0.9));
     border: 1px solid var(--SmartThemeBorderColor, #444);
     color: var(--SmartThemeBodyColor, #ddd);
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 6px;
-    font-size: 0.85em;
+    font-size: 16px; /* 모바일 확대 방지 */
     cursor: pointer;
+    flex: 1;
+    min-width: 120px;
+    min-height: 40px;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 #chat-lobby-batch-toolbar button {
     background: var(--SmartThemeQuoteColor, #6a9fb5);
     border: none;
     color: #fff;
-    padding: 6px 12px;
+    padding: 10px 16px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 0.9em;
+    min-height: 40px;
+    min-width: 60px;
+    touch-action: manipulation;
 }
 
 #chat-lobby-batch-toolbar button:hover {

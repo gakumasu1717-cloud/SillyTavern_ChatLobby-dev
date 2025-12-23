@@ -831,9 +831,15 @@
 
         // 채팅 아이템 클릭 이벤트
         chatsList.querySelectorAll('.lobby-chat-item').forEach(item => {
-            // 전체 아이템 클릭 핸들러
+            // 스크롤 감지를 위한 변수
+            let touchStartY = 0;
+            let isScrolling = false;
             let touchHandled = false;
+            
             const handleItemClick = (e) => {
+                // 스크롤 중이면 무시
+                if (isScrolling) return;
+                
                 // 배치 모드일 때는 체크박스 토글
                 if (batchModeActive) {
                     const cb = item.querySelector('.chat-select-cb');
@@ -849,11 +855,24 @@
             
             // 채팅 열기 (컨텐츠 클릭)
             const chatContent = item.querySelector('.chat-content');
-            chatContent.addEventListener('touchstart', () => { touchHandled = false; }, { passive: true });
+            chatContent.addEventListener('touchstart', (e) => {
+                touchHandled = false;
+                isScrolling = false;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            chatContent.addEventListener('touchmove', (e) => {
+                // 10px 이상 이동하면 스크롤로 판단
+                if (Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+                    isScrolling = true;
+                }
+            }, { passive: true });
             chatContent.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touchHandled = true;
-                handleItemClick(e);
+                if (!isScrolling) {
+                    e.preventDefault();
+                    touchHandled = true;
+                    handleItemClick(e);
+                }
+                isScrolling = false;
             });
             chatContent.addEventListener('click', (e) => {
                 if (!touchHandled) handleItemClick(e);
@@ -862,6 +881,8 @@
             
             // 즐겨찾기 버튼
             const favBtn = item.querySelector('.chat-fav-btn');
+            let favTouchStartY = 0;
+            let favIsScrolling = false;
             let favTouchHandled = false;
             const handleFav = (e) => {
                 e.stopPropagation();
@@ -872,12 +893,24 @@
                 favBtn.textContent = isNowFav ? '⭐' : '☆';
                 item.classList.toggle('is-favorite', isNowFav);
             };
-            favBtn.addEventListener('touchstart', () => { favTouchHandled = false; }, { passive: true });
+            favBtn.addEventListener('touchstart', (e) => {
+                favTouchHandled = false;
+                favIsScrolling = false;
+                favTouchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            favBtn.addEventListener('touchmove', (e) => {
+                if (Math.abs(e.touches[0].clientY - favTouchStartY) > 10) {
+                    favIsScrolling = true;
+                }
+            }, { passive: true });
             favBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                favTouchHandled = true;
-                handleFav(e);
+                if (!favIsScrolling) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    favTouchHandled = true;
+                    handleFav(e);
+                }
+                favIsScrolling = false;
             });
             favBtn.addEventListener('click', (e) => {
                 if (!favTouchHandled) handleFav(e);
@@ -886,18 +919,32 @@
             
             // 삭제 버튼
             const delBtn = item.querySelector('.chat-delete-btn');
+            let delTouchStartY = 0;
+            let delIsScrolling = false;
             let delTouchHandled = false;
             const handleDel = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 deleteChat(item);
             };
-            delBtn.addEventListener('touchstart', () => { delTouchHandled = false; }, { passive: true });
+            delBtn.addEventListener('touchstart', (e) => {
+                delTouchHandled = false;
+                delIsScrolling = false;
+                delTouchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            delBtn.addEventListener('touchmove', (e) => {
+                if (Math.abs(e.touches[0].clientY - delTouchStartY) > 10) {
+                    delIsScrolling = true;
+                }
+            }, { passive: true });
             delBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                delTouchHandled = true;
-                handleDel(e);
+                if (!delIsScrolling) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    delTouchHandled = true;
+                    handleDel(e);
+                }
+                delIsScrolling = false;
             });
             delBtn.addEventListener('click', (e) => {
                 if (!delTouchHandled) handleDel(e);
@@ -905,12 +952,180 @@
             });
         });
         
-        // 폴더 필터 드롭다운 업데이트 (값 유지)
-        updateFolderFilterDropdown(currentFilter);
-        
         // 정렬 드롭다운 값 설정
         const sortSelect = document.getElementById('chat-lobby-sort');
         if (sortSelect) sortSelect.value = currentSort;
+        
+        // 폴더 필터 드롭다운 값 설정
+        const filterSelect = document.getElementById('chat-lobby-folder-filter');
+        if (filterSelect) filterSelect.value = currentFilter;
+    }
+    
+    // 채팅만 다시 로드 (필터/정렬 변경 시)
+    async function reloadChatsWithFilter(cardElement, filterValue) {
+        const charAvatar = cardElement.dataset.charAvatar;
+        const chatsList = document.getElementById('chat-lobby-chats-list');
+        
+        chatsList.innerHTML = '<div class="lobby-loading">채팅 로딩 중...</div>';
+        
+        const chats = await loadChatsForCharacter(charAvatar);
+        
+        // 빈 채팅 체크
+        const hasNoChats = !chats || 
+            (Array.isArray(chats) && chats.length === 0) || 
+            (typeof chats === 'object' && !Array.isArray(chats) && (Object.keys(chats).length === 0 || chats.error === true));
+        
+        if (hasNoChats) {
+            document.getElementById('chat-panel-count').textContent = '채팅 없음';
+            chatsList.innerHTML = `
+                <div class="lobby-empty-state">
+                    <i>💬</i>
+                    <div>채팅 기록이 없습니다</div>
+                </div>
+            `;
+            return;
+        }
+        
+        // 배열 변환
+        let chatArray = [];
+        if (Array.isArray(chats)) {
+            chatArray = chats;
+        } else if (typeof chats === 'object') {
+            chatArray = Object.entries(chats).map(([key, value]) => {
+                if (typeof value === 'object') {
+                    return { ...value, file_name: value.file_name || key };
+                }
+                return { file_name: key, ...value };
+            });
+        }
+        
+        // 유효한 채팅만 필터링
+        chatArray = chatArray.filter(chat => {
+            const fileName = chat?.file_name || chat?.fileName || '';
+            return fileName && 
+                   (fileName.includes('.jsonl') || fileName.match(/\d{4}-\d{2}-\d{2}/)) &&
+                   !fileName.startsWith('chat_') &&
+                   fileName.toLowerCase() !== 'error';
+        });
+        
+        const lobbyData = loadLobbyData();
+        const currentSort = lobbyData.sortOption || 'recent';
+        
+        // 폴더 필터 적용
+        if (filterValue !== 'all') {
+            chatArray = chatArray.filter(chat => {
+                const fn = chat.file_name || chat.fileName || '';
+                const key = getChatKey(charAvatar, fn);
+                if (filterValue === 'favorites') {
+                    return lobbyData.favorites.includes(key);
+                }
+                const assigned = lobbyData.chatAssignments[key] || 'uncategorized';
+                return assigned === filterValue;
+            });
+        }
+        
+        // 정렬 적용
+        chatArray.sort((a, b) => {
+            const fnA = a.file_name || '';
+            const fnB = b.file_name || '';
+            
+            // 항상 즐겨찾기 우선
+            const keyA = getChatKey(charAvatar, fnA);
+            const keyB = getChatKey(charAvatar, fnB);
+            const favA = lobbyData.favorites.includes(keyA) ? 0 : 1;
+            const favB = lobbyData.favorites.includes(keyB) ? 0 : 1;
+            if (favA !== favB) return favA - favB;
+            
+            function parseDate(filename) {
+                const m = filename.match(/(\d{4})-(\d{2})-(\d{2})@(\d{2})h(\d{2})m(\d{2})s/);
+                if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime();
+                const m2 = filename.match(/(\d{4})-(\d{2})-(\d{2})\s*@?(\d{2})h\s*(\d{2})m\s*(\d{2})s/);
+                if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3], +m2[4], +m2[5], +m2[6]).getTime();
+                return 0;
+            }
+            
+            if (currentSort === 'name') return fnA.localeCompare(fnB, 'ko');
+            
+            let dateA = parseDate(fnA);
+            let dateB = parseDate(fnB);
+            if (!dateA && a.last_mes) dateA = typeof a.last_mes === 'number' ? a.last_mes : new Date(a.last_mes).getTime();
+            if (!dateB && b.last_mes) dateB = typeof b.last_mes === 'number' ? b.last_mes : new Date(b.last_mes).getTime();
+            return dateB - dateA;
+        });
+        
+        document.getElementById('chat-panel-count').textContent = `${chatArray.length}개 채팅`;
+        chatsList.innerHTML = chatArray.map((chat, idx) => renderChatItem(chat, charAvatar, idx)).join('');
+        
+        // 이벤트 재연결
+        bindChatItemEvents(chatsList, charAvatar);
+        
+        // 드롭다운 값 유지
+        const sortSelect = document.getElementById('chat-lobby-sort');
+        if (sortSelect) sortSelect.value = currentSort;
+        const filterSelect = document.getElementById('chat-lobby-folder-filter');
+        if (filterSelect) filterSelect.value = filterValue;
+    }
+    
+    // 채팅 아이템 이벤트 바인딩 (재사용)
+    function bindChatItemEvents(chatsList, charAvatar) {
+        chatsList.querySelectorAll('.lobby-chat-item').forEach(item => {
+            let touchStartY = 0;
+            let isScrolling = false;
+            let touchHandled = false;
+            
+            const handleItemClick = (e) => {
+                if (isScrolling) return;
+                if (batchModeActive) {
+                    const cb = item.querySelector('.chat-select-cb');
+                    if (cb && e.target !== cb) {
+                        cb.checked = !cb.checked;
+                        updateBatchCount();
+                    }
+                    return;
+                }
+                openChat(item);
+            };
+            
+            const chatContent = item.querySelector('.chat-content');
+            chatContent.addEventListener('touchstart', (e) => {
+                touchHandled = false; isScrolling = false;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            chatContent.addEventListener('touchmove', (e) => {
+                if (Math.abs(e.touches[0].clientY - touchStartY) > 10) isScrolling = true;
+            }, { passive: true });
+            chatContent.addEventListener('touchend', (e) => {
+                if (!isScrolling) { e.preventDefault(); touchHandled = true; handleItemClick(e); }
+                isScrolling = false;
+            });
+            chatContent.addEventListener('click', (e) => {
+                if (!touchHandled) handleItemClick(e);
+                touchHandled = false;
+            });
+            
+            // 즐겨찾기/삭제 버튼도 동일하게
+            const favBtn = item.querySelector('.chat-fav-btn');
+            let favStartY = 0, favScrolling = false, favHandled = false;
+            favBtn.addEventListener('touchstart', (e) => { favHandled = false; favScrolling = false; favStartY = e.touches[0].clientY; }, { passive: true });
+            favBtn.addEventListener('touchmove', (e) => { if (Math.abs(e.touches[0].clientY - favStartY) > 10) favScrolling = true; }, { passive: true });
+            favBtn.addEventListener('touchend', (e) => {
+                if (!favScrolling) {
+                    e.preventDefault(); e.stopPropagation(); favHandled = true;
+                    const isNowFav = toggleFavorite(item.dataset.charAvatar, item.dataset.fileName);
+                    favBtn.textContent = isNowFav ? '⭐' : '☆';
+                    item.classList.toggle('is-favorite', isNowFav);
+                }
+                favScrolling = false;
+            });
+            favBtn.addEventListener('click', (e) => { if (!favHandled) { e.stopPropagation(); const isNowFav = toggleFavorite(item.dataset.charAvatar, item.dataset.fileName); favBtn.textContent = isNowFav ? '⭐' : '☆'; item.classList.toggle('is-favorite', isNowFav); } favHandled = false; });
+            
+            const delBtn = item.querySelector('.chat-delete-btn');
+            let delStartY = 0, delScrolling = false, delHandled = false;
+            delBtn.addEventListener('touchstart', (e) => { delHandled = false; delScrolling = false; delStartY = e.touches[0].clientY; }, { passive: true });
+            delBtn.addEventListener('touchmove', (e) => { if (Math.abs(e.touches[0].clientY - delStartY) > 10) delScrolling = true; }, { passive: true });
+            delBtn.addEventListener('touchend', (e) => { if (!delScrolling) { e.preventDefault(); e.stopPropagation(); delHandled = true; deleteChat(item); } delScrolling = false; });
+            delBtn.addEventListener('click', (e) => { if (!delHandled) { e.stopPropagation(); deleteChat(item); } delHandled = false; });
+        });
     }
     
     // 폴더 필터 드롭다운 업데이트
@@ -1395,23 +1610,30 @@
         
         // 폴더 필터 변경 - 데스크톱 + 모바일
         const folderFilter = document.getElementById('chat-lobby-folder-filter');
-        const handleFolderFilter = (e) => {
-            e.stopPropagation();
-            setFilterFolder(e.target.value);
+        folderFilter.addEventListener('change', (e) => {
+            const newValue = e.target.value;
+            console.log('[Chat Lobby] Filter changed to:', newValue);
+            setFilterFolder(newValue);
+            // 선택된 캐릭터 다시 로드 (필터값 유지)
             const selectedCard = document.querySelector('.lobby-char-card.selected');
-            if (selectedCard) selectCharacter(selectedCard);
-        };
-        folderFilter.addEventListener('change', handleFolderFilter);
+            if (selectedCard) {
+                // selectCharacter를 직접 호출하지 않고 채팅만 다시 로드
+                reloadChatsWithFilter(selectedCard, newValue);
+            }
+        });
         
         // 정렬 변경 - 데스크톱 + 모바일
         const sortSelect = document.getElementById('chat-lobby-sort');
-        const handleSort = (e) => {
-            e.stopPropagation();
-            setSortOption(e.target.value);
+        sortSelect.addEventListener('change', (e) => {
+            const newValue = e.target.value;
+            console.log('[Chat Lobby] Sort changed to:', newValue);
+            setSortOption(newValue);
             const selectedCard = document.querySelector('.lobby-char-card.selected');
-            if (selectedCard) selectCharacter(selectedCard);
-        };
-        sortSelect.addEventListener('change', handleSort);
+            if (selectedCard) {
+                const currentFilter = document.getElementById('chat-lobby-folder-filter').value;
+                reloadChatsWithFilter(selectedCard, currentFilter);
+            }
+        });
         
         // 배치 모드 버튼 - 터치 중복 방지
         const batchModeBtn = document.getElementById('chat-lobby-batch-mode');
