@@ -481,9 +481,14 @@
         const avatarUrl = char.avatar ? `/characters/${encodeURIComponent(char.avatar)}` : '/img/ai4.png';
         const name = char.name || 'Unknown';
         const safeAvatar = (char.avatar || '').replace(/"/g, '&quot;');
+        
+        // SillyTavern 캐릭터 즐겨찾기 체크
+        const isFav = char.fav || char.fav === 'true' || (char.data?.extensions?.fav);
+        const favBadge = isFav ? '<span class="char-fav-badge">⭐</span>' : '';
 
         return `
-        <div class="lobby-char-card" data-char-index="${index}" data-char-avatar="${safeAvatar}">
+        <div class="lobby-char-card ${isFav ? 'is-char-fav' : ''}" data-char-index="${index}" data-char-avatar="${safeAvatar}" data-is-fav="${isFav}">
+            ${favBadge}
             <img class="lobby-char-avatar" src="${avatarUrl}" alt="${name}" onerror="this.src='/img/ai4.png'">
             <div class="lobby-char-name">${escapeHtml(name)}</div>
         </div>
@@ -615,6 +620,15 @@
                 (char.name || '').toLowerCase().includes(term)
             );
         }
+        
+        // 캐릭터 정렬: 즐겨찾기 캐릭터 먼저
+        filtered.sort((a, b) => {
+            const aFav = a.fav || a.fav === 'true' || (a.data?.extensions?.fav) ? 0 : 1;
+            const bFav = b.fav || b.fav === 'true' || (b.data?.extensions?.fav) ? 0 : 1;
+            if (aFav !== bFav) return aFav - bFav;
+            // 같은 그룹 내에서는 이름순
+            return (a.name || '').localeCompare(b.name || '', 'ko');
+        });
 
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -801,24 +815,51 @@
 
         // 채팅 아이템 클릭 이벤트
         chatsList.querySelectorAll('.lobby-chat-item').forEach(item => {
-            // 채팅 열기 (컨텐츠 클릭)
-            item.querySelector('.chat-content').addEventListener('click', () => openChat(item));
+            // 전체 아이템 클릭 핸들러
+            const handleItemClick = (e) => {
+                // 배치 모드일 때는 체크박스 토글
+                if (batchModeActive) {
+                    const cb = item.querySelector('.chat-select-cb');
+                    if (cb && e.target !== cb) {
+                        cb.checked = !cb.checked;
+                        updateBatchCount();
+                    }
+                    return;
+                }
+                // 일반 모드: 채팅 열기
+                openChat(item);
+            };
             
-            // 즐겨찾기 버튼
-            item.querySelector('.chat-fav-btn').addEventListener('click', (e) => {
+            // 채팅 열기 (컨텐츠 클릭) - 데스크톱 + 모바일
+            item.querySelector('.chat-content').addEventListener('click', handleItemClick);
+            item.querySelector('.chat-content').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handleItemClick(e);
+            });
+            
+            // 즐겨찾기 버튼 - 데스크톱 + 모바일
+            const favBtn = item.querySelector('.chat-fav-btn');
+            const handleFav = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 const fn = item.dataset.fileName;
                 const ca = item.dataset.charAvatar;
                 const isNowFav = toggleFavorite(ca, fn);
-                item.querySelector('.chat-fav-btn').textContent = isNowFav ? '⭐' : '☆';
+                favBtn.textContent = isNowFav ? '⭐' : '☆';
                 item.classList.toggle('is-favorite', isNowFav);
-            });
+            };
+            favBtn.addEventListener('click', handleFav);
+            favBtn.addEventListener('touchend', handleFav);
             
-            // 삭제 버튼
-            item.querySelector('.chat-delete-btn').addEventListener('click', (e) => {
+            // 삭제 버튼 - 데스크톱 + 모바일
+            const delBtn = item.querySelector('.chat-delete-btn');
+            const handleDel = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 deleteChat(item);
-            });
+            };
+            delBtn.addEventListener('click', handleDel);
+            delBtn.addEventListener('touchend', handleDel);
         });
         
         // 폴더 필터 드롭다운 업데이트
@@ -1189,6 +1230,17 @@
             if (container) container.style.display = 'flex';
             if (fab) fab.style.display = 'none';
             
+            // 배치 모드 리셋
+            if (batchModeActive) {
+                batchModeActive = false;
+                const chatsList = document.getElementById('chat-lobby-chats-list');
+                const toolbar = document.getElementById('chat-lobby-batch-toolbar');
+                const batchBtn = document.getElementById('chat-lobby-batch-mode');
+                if (chatsList) chatsList.classList.remove('batch-mode');
+                if (toolbar) toolbar.style.display = 'none';
+                if (batchBtn) batchBtn.classList.remove('active');
+            }
+            
             // 캐릭터 로딩 (약간의 딜레이 후 시도)
             setTimeout(() => {
                 updateCharacterGrid();
@@ -1296,31 +1348,54 @@
             }
         });
         
-        // 폴더 필터 변경
-        document.getElementById('chat-lobby-folder-filter').addEventListener('change', (e) => {
+        // 폴더 필터 변경 - 데스크톱 + 모바일
+        const folderFilter = document.getElementById('chat-lobby-folder-filter');
+        const handleFolderFilter = (e) => {
+            e.stopPropagation();
             setFilterFolder(e.target.value);
             const selectedCard = document.querySelector('.lobby-char-card.selected');
             if (selectedCard) selectCharacter(selectedCard);
-        });
+        };
+        folderFilter.addEventListener('change', handleFolderFilter);
         
-        // 정렬 변경
-        document.getElementById('chat-lobby-sort').addEventListener('change', (e) => {
+        // 정렬 변경 - 데스크톱 + 모바일
+        const sortSelect = document.getElementById('chat-lobby-sort');
+        const handleSort = (e) => {
+            e.stopPropagation();
             setSortOption(e.target.value);
             const selectedCard = document.querySelector('.lobby-char-card.selected');
             if (selectedCard) selectCharacter(selectedCard);
-        });
+        };
+        sortSelect.addEventListener('change', handleSort);
         
-        // 배치 모드 버튼
-        document.getElementById('chat-lobby-batch-mode').addEventListener('click', toggleBatchMode);
+        // 배치 모드 버튼 - 데스크톱 + 모바일
+        const batchModeBtn = document.getElementById('chat-lobby-batch-mode');
+        const handleBatchMode = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleBatchMode();
+        };
+        batchModeBtn.addEventListener('click', handleBatchMode);
+        batchModeBtn.addEventListener('touchend', handleBatchMode);
         
-        // 폴더 관리 버튼
-        document.getElementById('chat-lobby-folder-manage').addEventListener('click', openFolderModal);
+        // 폴더 관리 버튼 - 데스크톱 + 모바일
+        const folderManageBtn = document.getElementById('chat-lobby-folder-manage');
+        const handleFolderManage = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openFolderModal();
+        };
+        folderManageBtn.addEventListener('click', handleFolderManage);
+        folderManageBtn.addEventListener('touchend', handleFolderManage);
         
         // 폴더 모달 닫기
         document.getElementById('folder-modal-close').addEventListener('click', closeFolderModal);
         
-        // 폴더 추가
-        document.getElementById('add-folder-btn').addEventListener('click', () => {
+        // 폴더 추가 - 데스크톱 + 모바일
+        const addFolderBtn = document.getElementById('add-folder-btn');
+        const handleAddFolder = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const input = document.getElementById('new-folder-name');
             const name = input.value.trim();
             if (name) {
@@ -1329,7 +1404,9 @@
                 refreshFolderList();
                 updateFolderFilterDropdown();
             }
-        });
+        };
+        addFolderBtn.addEventListener('click', handleAddFolder);
+        addFolderBtn.addEventListener('touchend', handleAddFolder);
         
         // Enter 키로 폴더 추가
         document.getElementById('new-folder-name').addEventListener('keydown', (e) => {
@@ -1338,11 +1415,25 @@
             }
         });
         
-        // 배치 이동 버튼
-        document.getElementById('batch-move-btn').addEventListener('click', executeBatchMove);
+        // 배치 이동 버튼 - 데스크톱 + 모바일
+        const batchMoveBtn = document.getElementById('batch-move-btn');
+        const handleBatchMove = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            executeBatchMove();
+        };
+        batchMoveBtn.addEventListener('click', handleBatchMove);
+        batchMoveBtn.addEventListener('touchend', handleBatchMove);
         
-        // 배치 취소 버튼
-        document.getElementById('batch-cancel-btn').addEventListener('click', toggleBatchMode);
+        // 배치 취소 버튼 - 데스크톱 + 모바일
+        const batchCancelBtn = document.getElementById('batch-cancel-btn');
+        const handleBatchCancel = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleBatchMode();
+        };
+        batchCancelBtn.addEventListener('click', handleBatchCancel);
+        batchCancelBtn.addEventListener('touchend', handleBatchCancel);
         
         // 채팅 체크박스 변경 감지 (이벤트 위임)
         document.getElementById('chat-lobby-chats-list').addEventListener('change', (e) => {

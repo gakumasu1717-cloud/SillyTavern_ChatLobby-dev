@@ -213,6 +213,21 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
+    position: relative;
+}
+
+/* 캐릭터 즐겨찾기 배지 */
+.char-fav-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 0.9em;
+    z-index: 2;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.lobby-char-card.is-char-fav {
+    border-color: rgba(255, 193, 7, 0.3);
 }
 
 .lobby-char-card:hover {
@@ -646,10 +661,16 @@
     color: var(--SmartThemeBodyColor, #ddd);
     padding: 6px 10px;
     border-radius: 6px;
-    font-size: 0.85em;
+    font-size: 16px; /* 모바일에서 확대 방지 */
     cursor: pointer;
     flex: 1;
     max-width: 140px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    /* 모바일 터치 영역 확보 */
+    min-height: 36px;
+    touch-action: manipulation;
 }
 
 .folder-filter select:hover {
@@ -670,6 +691,10 @@
     cursor: pointer;
     font-size: 1em;
     transition: all 0.2s;
+    /* 모바일 터치 영역 */
+    min-width: 40px;
+    min-height: 36px;
+    touch-action: manipulation;
 }
 
 .folder-actions button:hover {
