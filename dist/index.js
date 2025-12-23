@@ -812,11 +812,16 @@
         // 유효한 채팅만 필터링 (실제 파일명이 있는 것)
         chatArray = chatArray.filter(chat => {
             const fileName = chat?.file_name || chat?.fileName || '';
-            // 유효한 파일명: .jsonl 확장자 또는 날짜 패턴 포함
-            return fileName && 
-                   (fileName.includes('.jsonl') || fileName.match(/\d{4}-\d{2}-\d{2}/)) &&
+            // 유효한 파일명: .jsonl 확장자 또는 날짜 패턴 포함 (공백 허용)
+            const hasJsonl = fileName.includes('.jsonl');
+            const hasDatePattern = /\d{4}-\d{2}-\d{2}/.test(fileName);
+            const isValidName = fileName && 
+                   (hasJsonl || hasDatePattern) &&
                    !fileName.startsWith('chat_') &&
                    fileName.toLowerCase() !== 'error';
+            
+            console.log('[Chat Lobby] Filter check:', fileName, 'hasJsonl:', hasJsonl, 'hasDate:', hasDatePattern, 'valid:', isValidName);
+            return isValidName;
         });
         
         // 필터링 후 채팅이 없으면 빈 상태 표시
@@ -864,15 +869,20 @@
             
             // 날짜 파싱 함수
             function parseDate(filename) {
-                // 형식: YYYY-MM-DD@HHhMMmSSs
+                // 형식: YYYY-MM-DD@HHhMMmSSs (공백 없음)
                 const m = filename.match(/(\d{4})-(\d{2})-(\d{2})@(\d{2})h(\d{2})m(\d{2})s/);
                 if (m) {
                     return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime();
                 }
-                // 형식: YYYY-MM-DD@HHh MMm SSs (ms 포함)
-                const m2 = filename.match(/(\d{4})-(\d{2})-(\d{2})\s*@?(\d{2})h\s*(\d{2})m\s*(\d{2})s/);
+                // 형식: YYYY-MM-DD @HHh MMm SSs (공백 있음) - "2025-10-26 @05h 32m 18s"
+                const m2 = filename.match(/(\d{4})-(\d{2})-(\d{2})\s*@\s*(\d{2})h\s*(\d{2})m\s*(\d{2})s/);
                 if (m2) {
                     return new Date(+m2[1], +m2[2]-1, +m2[3], +m2[4], +m2[5], +m2[6]).getTime();
+                }
+                // 형식: YYYY-MM-DD만 있는 경우
+                const m3 = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (m3) {
+                    return new Date(+m3[1], +m3[2]-1, +m3[3]).getTime();
                 }
                 return 0;
             }
@@ -1065,8 +1075,10 @@
         // 유효한 채팅만 필터링
         chatArray = chatArray.filter(chat => {
             const fileName = chat?.file_name || chat?.fileName || '';
+            const hasJsonl = fileName.includes('.jsonl');
+            const hasDatePattern = /\d{4}-\d{2}-\d{2}/.test(fileName);
             return fileName && 
-                   (fileName.includes('.jsonl') || fileName.match(/\d{4}-\d{2}-\d{2}/)) &&
+                   (hasJsonl || hasDatePattern) &&
                    !fileName.startsWith('chat_') &&
                    fileName.toLowerCase() !== 'error';
         });
@@ -1100,10 +1112,15 @@
             if (favA !== favB) return favA - favB;
             
             function parseDate(filename) {
+                // 형식: YYYY-MM-DD@HHhMMmSSs (공백 없음)
                 const m = filename.match(/(\d{4})-(\d{2})-(\d{2})@(\d{2})h(\d{2})m(\d{2})s/);
                 if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime();
-                const m2 = filename.match(/(\d{4})-(\d{2})-(\d{2})\s*@?(\d{2})h\s*(\d{2})m\s*(\d{2})s/);
+                // 형식: YYYY-MM-DD @HHh MMm SSs (공백 있음)
+                const m2 = filename.match(/(\d{4})-(\d{2})-(\d{2})\s*@\s*(\d{2})h\s*(\d{2})m\s*(\d{2})s/);
                 if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3], +m2[4], +m2[5], +m2[6]).getTime();
+                // 형식: YYYY-MM-DD만
+                const m3 = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (m3) return new Date(+m3[1], +m3[2]-1, +m3[3]).getTime();
                 return 0;
             }
             
