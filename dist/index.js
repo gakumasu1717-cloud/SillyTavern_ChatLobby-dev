@@ -224,10 +224,9 @@
                                     <option value="favorites">⭐ 즐겨찾기</option>
                                 </select>
                                 <select id="chat-lobby-sort">
-                                    <option value="recent">🕐 최근 사용</option>
-                                    <option value="created">📅 생성일</option>
+                                    <option value="recent">🕐 최근순</option>
+                                    <option value="created">📅 생성일순</option>
                                     <option value="name">🔤 이름순</option>
-                                    <option value="favorites">⭐ 즐겨찾기 먼저</option>
                                 </select>
                             </div>
                             <div class="folder-actions">
@@ -621,15 +620,32 @@
             );
         }
         
-        // 캐릭터 정렬: 즐겨찾기 캐릭터 먼저
+        // 캐릭터 정렬: 즐겨찾기 먼저 → 특수문자/숫자 → 영어 → 한글
         filtered.sort((a, b) => {
             const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
             const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
-            const aFav = aIsFav ? 0 : 1;
-            const bFav = bIsFav ? 0 : 1;
-            if (aFav !== bFav) return aFav - bFav;
-            // 같은 그룹 내에서는 이름순
-            return (a.name || '').localeCompare(b.name || '', 'ko');
+            
+            // 즐겨찾기 우선
+            if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+            
+            // 이름 정렬: 특수문자/숫자 → 영어 → 한글
+            const aName = (a.name || '').trim();
+            const bName = (b.name || '').trim();
+            
+            const getCharType = (str) => {
+                if (!str) return 99;
+                const c = str.charAt(0);
+                if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(c)) return 0; // 숫자/특수문자
+                if (/[a-zA-Z]/.test(c)) return 1; // 영어
+                if (/[\u3131-\u314e\u314f-\u3163\uac00-\ud7a3]/.test(c)) return 2; // 한글
+                return 3; // 기타
+            };
+            
+            const typeA = getCharType(aName);
+            const typeB = getCharType(bName);
+            if (typeA !== typeB) return typeA - typeB;
+            
+            return aName.localeCompare(bName, 'ko');
         });
 
         if (filtered.length === 0) {
@@ -772,6 +788,13 @@
             const fnA = a.file_name || '';
             const fnB = b.file_name || '';
             
+            // 항상 즐겨찾기 우선 (모든 정렬 모드에서)
+            const keyA = getChatKey(charAvatar, fnA);
+            const keyB = getChatKey(charAvatar, fnB);
+            const favA = lobbyData.favorites.includes(keyA) ? 0 : 1;
+            const favB = lobbyData.favorites.includes(keyB) ? 0 : 1;
+            if (favA !== favB) return favA - favB;
+            
             // 날짜 파싱 함수
             function parseDate(filename) {
                 // 형식: YYYY-MM-DD@HHhMMmSSs
@@ -785,15 +808,6 @@
                     return new Date(+m2[1], +m2[2]-1, +m2[3], +m2[4], +m2[5], +m2[6]).getTime();
                 }
                 return 0;
-            }
-            
-            // 즐겨찾기 먼저 정렬
-            if (currentSort === 'favorites') {
-                const keyA = getChatKey(charAvatar, fnA);
-                const keyB = getChatKey(charAvatar, fnB);
-                const favA = lobbyData.favorites.includes(keyA) ? 0 : 1;
-                const favB = lobbyData.favorites.includes(keyB) ? 0 : 1;
-                if (favA !== favB) return favA - favB;
             }
             
             if (currentSort === 'name') {
@@ -891,21 +905,21 @@
             });
         });
         
-        // 폴더 필터 드롭다운 업데이트
-        updateFolderFilterDropdown();
+        // 폴더 필터 드롭다운 업데이트 (값 유지)
+        updateFolderFilterDropdown(currentFilter);
         
         // 정렬 드롭다운 값 설정
         const sortSelect = document.getElementById('chat-lobby-sort');
         if (sortSelect) sortSelect.value = currentSort;
-        
-        const filterSelect = document.getElementById('chat-lobby-folder-filter');
-        if (filterSelect) filterSelect.value = currentFilter;
     }
     
     // 폴더 필터 드롭다운 업데이트
-    function updateFolderFilterDropdown() {
+    function updateFolderFilterDropdown(selectedValue) {
         const filterSelect = document.getElementById('chat-lobby-folder-filter');
         if (!filterSelect) return;
+        
+        // 현재 선택된 값 기억 (매개변수 우선)
+        const currentValue = selectedValue || filterSelect.value || 'all';
         
         const data = loadLobbyData();
         const sorted = [...data.folders].sort((a, b) => a.order - b.order);
@@ -918,7 +932,9 @@
             }
         });
         filterSelect.innerHTML = html;
-        filterSelect.value = data.filterFolder || 'all';
+        
+        // 선택된 값 복원
+        filterSelect.value = currentValue;
     }
     
     // 폴더 관리 모달 열기
