@@ -195,7 +195,7 @@
 #chat-lobby-characters {
     flex: 1;
     padding: 20px;
-    padding-bottom: 100px; /* 맨 아래 캐릭터 잘림 방지 */
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 20px)); /* 하단 네비게이션 대응 */
     overflow-y: auto;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -323,7 +323,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px;
-    padding-bottom: 80px; /* 배치 툴바 공간 확보 */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 20px)); /* 배치 툴바 + 하단 네비 공간 */
 }
 
 .lobby-chat-item {
@@ -992,7 +992,7 @@
     #chat-lobby-batch-toolbar {
         flex-wrap: wrap;
         padding: 15px;
-        padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 20px));
     }
     
     #chat-lobby-batch-toolbar span {

@@ -223,11 +223,6 @@
                                     <option value="all">📁 전체</option>
                                     <option value="favorites">⭐ 즐겨찾기</option>
                                 </select>
-                                <select id="chat-lobby-sort">
-                                    <option value="recent">🕐 최근순</option>
-                                    <option value="created">📅 생성일순</option>
-                                    <option value="name">🔤 이름순</option>
-                                </select>
                             </div>
                             <div class="folder-actions">
                                 <button id="chat-lobby-batch-mode" title="다중 선택">☑️</button>
@@ -619,6 +614,14 @@
                 (char.name || '').toLowerCase().includes(term)
             );
         }
+        
+        // 캐릭터 정렬: 즐겨찾기 캐릭터만 최상단으로 (기본 순서 유지)
+        filtered.sort((a, b) => {
+            const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
+            const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
+            if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+            return 0; // 즐겨찾기 외에는 원래 순서 유지
+        });
 
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -924,10 +927,6 @@
             });
         });
         
-        // 정렬 드롭다운 값 설정
-        const sortSelect = document.getElementById('chat-lobby-sort');
-        if (sortSelect) sortSelect.value = currentSort;
-        
         // 폴더 필터 드롭다운 값 설정
         const filterSelect = document.getElementById('chat-lobby-folder-filter');
         if (filterSelect) filterSelect.value = currentFilter;
@@ -1032,8 +1031,6 @@
         bindChatItemEvents(chatsList, charAvatar);
         
         // 드롭다운 값 유지
-        const sortSelect = document.getElementById('chat-lobby-sort');
-        if (sortSelect) sortSelect.value = currentSort;
         const filterSelect = document.getElementById('chat-lobby-folder-filter');
         if (filterSelect) filterSelect.value = filterValue;
     }
@@ -1591,19 +1588,6 @@
             if (selectedCard) {
                 // selectCharacter를 직접 호출하지 않고 채팅만 다시 로드
                 reloadChatsWithFilter(selectedCard, newValue);
-            }
-        });
-        
-        // 정렬 변경 - 데스크톱 + 모바일
-        const sortSelect = document.getElementById('chat-lobby-sort');
-        sortSelect.addEventListener('change', (e) => {
-            const newValue = e.target.value;
-            console.log('[Chat Lobby] Sort changed to:', newValue);
-            setSortOption(newValue);
-            const selectedCard = document.querySelector('.lobby-char-card.selected');
-            if (selectedCard) {
-                const currentFilter = document.getElementById('chat-lobby-folder-filter').value;
-                reloadChatsWithFilter(selectedCard, currentFilter);
             }
         });
         
