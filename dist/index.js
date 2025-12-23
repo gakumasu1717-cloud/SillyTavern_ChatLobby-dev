@@ -459,18 +459,21 @@
     
     // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
     async function openPersonaManagement() {
+        console.log('[Chat Lobby] openPersonaManagement called');
         closeLobby();
-        // 딥레이를 위한 초기 딥레이
-        await new Promise(resolve => setTimeout(resolve, 150));
         
-        // 페르소나 관리 버튼 클릭 (SillyTavern ID: persona-management-button)
-        const personaBtn = document.getElementById('persona-management-button');
-        if (personaBtn) {
-            console.log('[Chat Lobby] Opening persona management');
-            personaBtn.click();
-        } else {
-            console.log('[Chat Lobby] persona-management-button not found');
-        }
+        // 딥레이 후 버튼 클릭
+        setTimeout(() => {
+            // 페르소나 관리 drawer 클릭 (SillyTavern ID: persona-management-button)
+            const personaBtn = document.getElementById('persona-management-button');
+            console.log('[Chat Lobby] persona-management-button:', personaBtn);
+            if (personaBtn) {
+                personaBtn.click();
+                console.log('[Chat Lobby] Clicked persona-management-button');
+            } else {
+                console.log('[Chat Lobby] persona-management-button not found');
+            }
+        }, 200);
     }
 
     // 페르소나 변경
@@ -1715,51 +1718,34 @@
             }
         });
         
-        // 페르소나 추가 버튼 - 파일 선택으로 페르소나 추가 (로비 열린 상태)
+        // 페르소나 추가 버튼 - create_dummy_persona 클릭으로 이름 입력 팝업
         document.getElementById('chat-lobby-add-persona').addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             console.log('[Chat Lobby] Add persona button clicked');
             
-            // 파일 input 생성하여 이미지 선택
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
+            closeLobby();
             
-            fileInput.addEventListener('change', async (evt) => {
-                const file = evt.target.files[0];
-                if (!file) {
-                    document.body.removeChild(fileInput);
-                    return;
-                }
-                
-                try {
-                    const formData = new FormData();
-                    formData.append('avatar', file);
-                    formData.append('overwrite_name', '');
+            // 페르소나 관리 drawer 열고 create_dummy_persona 클릭
+            setTimeout(() => {
+                const personaBtn = document.getElementById('persona-management-button');
+                console.log('[Chat Lobby] persona-management-button:', personaBtn);
+                if (personaBtn) {
+                    personaBtn.click();
                     
-                    const response = await fetch('/api/avatars/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    if (response.ok) {
-                        console.log('[Chat Lobby] Persona uploaded');
-                        // 페르소나 목록 새로고침
-                        await updatePersonaSelect();
-                    } else {
-                        console.error('[Chat Lobby] Failed to upload persona:', response.status);
-                        alert('페르소나 추가에 실패했습니다.');
-                    }
-                } catch (error) {
-                    console.error('[Chat Lobby] Error uploading persona:', error);
-                    alert('페르소나 추가 중 오류가 발생했습니다.');
+                    // drawer 열린 후 create_dummy_persona 클릭
+                    setTimeout(() => {
+                        const createBtn = document.getElementById('create_dummy_persona');
+                        console.log('[Chat Lobby] create_dummy_persona:', createBtn);
+                        if (createBtn) {
+                            createBtn.click();
+                            console.log('[Chat Lobby] Clicked create_dummy_persona');
+                        } else {
+                            console.log('[Chat Lobby] create_dummy_persona not found');
+                        }
+                    }, 400);
                 }
-                document.body.removeChild(fileInput);
-            });
-            fileInput.click();
+            }, 200);
         });
         
         // 캐릭터 삭제 버튼 - API로 직접 삭제 (로비 열린 상태)
