@@ -2196,18 +2196,28 @@
             }
         });
         
-        // 채팅 정렬 변경
+        // 채팅 정렬 변경 - input 이벤트 사용 (모바일 호환성)
         const chatSortSelect = document.getElementById('chat-lobby-chat-sort');
-        chatSortSelect.addEventListener('change', (e) => {
-            const newSort = e.target.value;
+        let lastChatSortValue = chatSortSelect.value;
+        const handleChatSortChange = (e) => {
+            const newSort = chatSortSelect.value;
+            // 중복 호출 방지
+            if (newSort === lastChatSortValue) {
+                console.log('[Chat Lobby] Chat sort unchanged, skipping');
+                return;
+            }
+            lastChatSortValue = newSort;
             console.log('[Chat Lobby] Chat sort changed to:', newSort);
             setSortOption(newSort);
-            // 현재 선택된 캐릭터의 채팅 다시 로드
+            // 현재 선택된 캐릭터의 채팅 다시 로드 (현재 필터 유지)
             const selectedCard = document.querySelector('.lobby-char-card.selected');
             if (selectedCard) {
-                selectCharacter(selectedCard);
+                const currentFilter = document.getElementById('chat-lobby-folder-filter')?.value || 'all';
+                reloadChatsWithFilter(selectedCard, currentFilter);
             }
-        });
+        };
+        chatSortSelect.addEventListener('change', handleChatSortChange);
+        chatSortSelect.addEventListener('input', handleChatSortChange);
         
         // 배치 모드 버튼 - 터치 중복 방지
         const batchModeBtn = document.getElementById('chat-lobby-batch-mode');
@@ -2343,16 +2353,25 @@
             }, 300);
         });
         
-        // 캐릭터 정렬 드롭다운 변경 이벤트
+        // 캐릭터 정렬 드롭다운 변경 이벤트 - input 이벤트 추가 (모바일 호환성)
         const charSortSelect = document.getElementById('chat-lobby-char-sort');
-        charSortSelect.addEventListener('change', (e) => {
-            const newSort = e.target.value;
+        let lastCharSortValue = charSortSelect.value;
+        const handleCharSortChange = (e) => {
+            const newSort = charSortSelect.value;
+            // 중복 호출 방지
+            if (newSort === lastCharSortValue) {
+                console.log('[Chat Lobby] Char sort unchanged, skipping');
+                return;
+            }
+            lastCharSortValue = newSort;
             console.log('[Chat Lobby] Character sort changed to:', newSort);
             setCharSortOption(newSort);
             // 현재 검색어 유지하면서 캐릭터 목록 새로고침
             const currentSearch = searchInput.value;
             updateCharacterGrid(currentSearch);
-        });
+        };
+        charSortSelect.addEventListener('change', handleCharSortChange);
+        charSortSelect.addEventListener('input', handleCharSortChange);
 
         // ESC 키로 닫기
         document.addEventListener('keydown', (e) => {
