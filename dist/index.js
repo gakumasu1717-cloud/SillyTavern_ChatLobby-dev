@@ -917,10 +917,6 @@
         const lobbyData = loadLobbyData();
         const charSortOption = lobbyData.charSortOption || 'recent';
         
-        // 정렬 드롭다운 값 업데이트
-        const sortSelect = document.getElementById('chat-lobby-char-sort');
-        if (sortSelect) sortSelect.value = charSortOption;
-        
         // 캐릭터 정렬 (즐겨찾기 우선 + 선택된 정렬 기준)
         if (charSortOption === 'name') {
             // 이름순 정렬
@@ -1352,13 +1348,6 @@
         // 현재 정렬 옵션 가져오기 (최신값)
         const lobbyData = loadLobbyData();
         const currentSort = lobbyData.sortOption || 'recent';
-        console.log('[Chat Lobby] reloadChatsWithFilter - sort:', currentSort, 'filter:', filterValue);
-        
-        // 정렬 드롭다운 값 동기화
-        const chatSortSelect = document.getElementById('chat-lobby-chat-sort');
-        if (chatSortSelect && chatSortSelect.value !== currentSort) {
-            chatSortSelect.value = currentSort;
-        }
         
         // 빈 채팅 체크
         const hasNoChats = !chats || 
