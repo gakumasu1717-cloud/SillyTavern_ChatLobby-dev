@@ -595,21 +595,31 @@
             console.log('[Chat Lobby] Clicking ST-CustomTheme sidebar button');
             stButton.click();
         } else if (personaDrawer) {
-            // drawer-toggle 클릭 (drawer-icon은 작동 안 함)
+            // 방법 1: drawer-toggle 클릭
             const drawerToggle = personaDrawer.querySelector('.drawer-toggle');
             if (drawerToggle) {
                 console.log('[Chat Lobby] Clicking drawer-toggle');
                 drawerToggle.click();
-                
-                // 클릭 후 drawer가 열렸는지 확인
-                setTimeout(() => {
-                    const drawerContent = personaDrawer.querySelector('.drawer-content');
-                    const isOpen = drawerContent && window.getComputedStyle(drawerContent).display !== 'none';
-                    console.log('[Chat Lobby] Drawer opened:', isOpen);
-                }, 100);
-            } else {
-                console.warn('[Chat Lobby] drawer-toggle not found');
             }
+            
+            // 방법 2: drawer-content를 직접 표시 (클릭이 안 될 경우)
+            setTimeout(() => {
+                const drawerContent = personaDrawer.querySelector('.drawer-content');
+                if (drawerContent) {
+                    const isOpen = window.getComputedStyle(drawerContent).display !== 'none';
+                    console.log('[Chat Lobby] Drawer opened:', isOpen);
+                    
+                    if (!isOpen) {
+                        // 직접 열기
+                        console.log('[Chat Lobby] Forcing drawer-content open');
+                        drawerContent.style.display = 'block';
+                        drawerContent.style.maxHeight = '50vh';
+                        drawerContent.style.overflow = 'auto';
+                        // 열림 클래스 추가
+                        personaDrawer.classList.add('openDrawer');
+                    }
+                }
+            }, 150);
         } else {
             console.warn('[Chat Lobby] No persona management button found');
         }
@@ -1725,19 +1735,40 @@
         }
     }
 
-    // 인덱스로 채팅 열기
-    async function openChatByIndex(chatIndex, charAvatar) {
+    // 파일명으로 채팅 열기
+    async function openChatByFileName(fileName, charAvatar) {
         try {
             // 채팅 관리 버튼 클릭
             const manageChatsBtn = document.getElementById('option_select_chat');
             if (manageChatsBtn) {
                 manageChatsBtn.click();
 
-                // 채팅 목록에서 해당 채팅 선택 - 딜레이 최소화
+                // 채팅 목록에서 해당 파일명 찾기
                 setTimeout(() => {
                     const chatItems = document.querySelectorAll('.select_chat_block');
-                    if (chatItems[chatIndex]) {
-                        chatItems[chatIndex].click();
+                    let found = false;
+                    
+                    for (const item of chatItems) {
+                        // 파일명이 포함된 요소 찾기
+                        const nameEl = item.querySelector('.select_chat_block_filename, .ch_name');
+                        const itemText = nameEl?.textContent || item.textContent || '';
+                        
+                        // 파일명 비교 (확장자 제거 후 비교)
+                        const cleanFileName = fileName.replace('.jsonl', '');
+                        if (itemText.includes(cleanFileName)) {
+                            console.log('[Chat Lobby] Found chat item:', cleanFileName);
+                            item.click();
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        console.warn('[Chat Lobby] Could not find chat:', fileName);
+                        // 폴백: 첫 번째 채팅 선택
+                        if (chatItems.length > 0) {
+                            chatItems[0].click();
+                        }
                     }
                 }, 200);
             }
