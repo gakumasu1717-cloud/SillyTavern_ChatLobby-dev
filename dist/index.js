@@ -565,7 +565,6 @@
                     console.log('[Chat Lobby] Clicked ST sidebar persona button');
                 }
             }
-            }
         }, 200);
     }
 
