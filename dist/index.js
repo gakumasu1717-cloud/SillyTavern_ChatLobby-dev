@@ -223,7 +223,7 @@
         return sorted.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     }
 
-    // 로비 UI HTML
+    // 로비 UI HTML - 3칸 그리드 레이아웃 (왼쪽: 페르소나+캐릭터, 오른쪽: 채팅목록)
     function createLobbyHTML() {
         return `
         <div id="chat-lobby-fab" title="Chat Lobby 열기">💬</div>
@@ -238,36 +238,39 @@
                         <button id="chat-lobby-close">✕</button>
                     </div>
                 </div>
-                <div id="chat-lobby-persona-bar">
-                    <div id="chat-lobby-persona-list">
-                        <div class="lobby-loading">로딩 중...</div>
+                <div id="chat-lobby-main">
+                    <!-- 왼쪽 패널: 페르소나 + 캐릭터 -->
+                    <div id="chat-lobby-left">
+                        <div id="chat-lobby-persona-bar">
+                            <div id="chat-lobby-persona-list">
+                                <div class="lobby-loading">로딩 중...</div>
+                            </div>
+                        </div>
+                        <div id="chat-lobby-search">
+                            <input type="text" id="chat-lobby-search-input" placeholder="캐릭터 검색...">
+                            <select id="chat-lobby-char-sort" title="캐릭터 정렬">
+                                <option value="recent">🕒 최근 채팅순</option>
+                                <option value="name">🔤 이름순</option>
+                                <option value="created">📅 생성일순</option>
+                                <option value="chats">💬 채팅 수</option>
+                            </select>
+                        </div>
+                        <div id="chat-lobby-characters">
+                            <div class="lobby-loading">캐릭터 로딩 중...</div>
+                        </div>
                     </div>
-                </div>
-                <div id="chat-lobby-search">
-                    <input type="text" id="chat-lobby-search-input" placeholder="캐릭터 검색...">
-                    <select id="chat-lobby-char-sort" title="캐릭터 정렬">
-                        <option value="recent">🕒 최근 채팅순</option>
-                        <option value="name">🔤 이름순</option>
-                        <option value="created">📅 생성일순</option>
-                        <option value="chats">💬 채팅 수</option>
-                    </select>
-                </div>
-                <div id="chat-lobby-content">
-                    <div id="chat-lobby-characters">
-                        <div class="lobby-loading">캐릭터 로딩 중...</div>
-                    </div>
+                    <!-- 오른쪽 패널: 채팅 목록 (항상 표시) -->
                     <div id="chat-lobby-chats">
                         <div id="chat-lobby-chats-header">
-                            <button id="chat-lobby-chats-close" title="닫기">←</button>
-                            <img src="" alt="avatar" id="chat-panel-avatar" title="캐릭터 설정">
+                            <img src="" alt="avatar" id="chat-panel-avatar" title="캐릭터 설정" style="display:none;">
                             <div class="char-info">
-                                <div class="char-name" id="chat-panel-name">캐릭터 선택</div>
-                                <div class="chat-count" id="chat-panel-count">채팅 목록</div>
+                                <div class="char-name" id="chat-panel-name">캐릭터를 선택하세요</div>
+                                <div class="chat-count" id="chat-panel-count"></div>
                             </div>
-                            <button id="chat-lobby-delete-char" title="캐릭터 삭제">🗑️</button>
-                            <button id="chat-lobby-new-chat">+ 새 채팅</button>
+                            <button id="chat-lobby-delete-char" title="캐릭터 삭제" style="display:none;">🗑️</button>
+                            <button id="chat-lobby-new-chat" style="display:none;">+ 새 채팅</button>
                         </div>
-                        <div id="chat-lobby-folder-bar">
+                        <div id="chat-lobby-folder-bar" style="display:none;">
                             <div class="folder-filter">
                                 <select id="chat-lobby-folder-filter">
                                     <option value="all">📁 전체</option>
@@ -279,7 +282,7 @@
                                 <button id="chat-lobby-folder-manage" title="폴더 관리">📁</button>
                             </div>
                         </div>
-                        <div id="chat-lobby-batch-toolbar">
+                        <div id="chat-lobby-batch-toolbar" style="display:none;">
                             <span id="batch-selected-count">0개 선택</span>
                             <select id="batch-move-folder">
                                 <option value="">폴더 선택...</option>
@@ -554,81 +557,41 @@
     }
     
     // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
-    // ST-CustomTheme 호환성 개선 + 중복 클릭 방지
     async function openPersonaManagement() {
         console.log('[Chat Lobby] openPersonaManagement called');
         
         // 먼저 로비 닫기
         closeLobby();
 
-        // 페르소나 관리 열기 시도
+        // 약간의 지연 후 페르소나 관리 열기
         setTimeout(() => {
-            // 방법 1: drawer-content 내부의 실제 페르소나 관리 컨텐츠 확인
+            // SillyTavern의 페르소나 관리 drawer 찾기
             const personaDrawer = document.getElementById('persona-management-button');
             
             if (personaDrawer) {
-                // drawer가 이미 열려있는지 확인
-                const drawerContent = personaDrawer.querySelector('.drawer-content');
-                const isOpen = drawerContent && drawerContent.style.display !== 'none' && drawerContent.offsetHeight > 0;
-                
-                if (!isOpen) {
-                    // drawer-toggle을 클릭해서 열기 (drawer-icon이 아님!)
-                    const toggle = personaDrawer.querySelector('.drawer-toggle');
-                    if (toggle) {
-                        console.log('[Chat Lobby] Clicking drawer-toggle');
-                        toggle.click();
-                        return;
-                    }
-                    
-                    // 폴백: 전체 drawer 클릭
-                    console.log('[Chat Lobby] Clicking personaDrawer');
-                    personaDrawer.click();
-                }
-                return;
-            }
-
-            // 방법 2: ST-CustomTheme 사이드바
-            const sidebarItem = document.querySelector('#st-custom-sidebar [data-btn-id="persona-management-button"]');
-            if (sidebarItem) {
-                console.log('[Chat Lobby] Found in ST sidebar');
-                sidebarItem.click();
-                return;
-            }
-
-            // 방법 3: 햄버거 메뉴
-            const hamburgerItem = document.querySelector('#st-hamburger-dropdown [data-btn-id="persona-management-button"]');
-            if (hamburgerItem) {
-                console.log('[Chat Lobby] Found in hamburger dropdown');
-                hamburgerItem.click();
-                return;
-            }
-
-            // 방법 4: 좌측 메뉴 drawer 직접 열기
-            const leftDrawer = document.getElementById('left-nav-panel');
-            if (leftDrawer) {
-                // 먼저 left nav를 열고
-                const leftToggle = document.getElementById('leftNavDrawerIcon');
-                if (leftToggle) {
-                    leftToggle.click();
-                    // 잠시 후 페르소나 버튼 찾아서 클릭
-                    setTimeout(() => {
-                        const personaBtn = document.getElementById('persona-management-button');
-                        if (personaBtn) {
-                            const toggle = personaBtn.querySelector('.drawer-toggle');
-                            if (toggle) toggle.click();
-                            else personaBtn.click();
-                        }
-                    }, 150);
+                // .drawer-toggle 찾기 (drawer를 여는 버튼)
+                const toggle = personaDrawer.querySelector('.drawer-toggle');
+                if (toggle) {
+                    console.log('[Chat Lobby] Opening persona management via drawer-toggle');
+                    toggle.click();
+                    return;
                 }
             }
 
-            console.warn('[Chat Lobby] persona-management-button not found');
-        }, 100);
+            // ST-CustomTheme 사이드바 체크
+            const sidebarBtn = document.querySelector('[data-btn-id="persona-management-button"]');
+            if (sidebarBtn) {
+                console.log('[Chat Lobby] Opening persona management via sidebar');
+                sidebarBtn.click();
+                return;
+            }
+
+            console.warn('[Chat Lobby] Could not find persona management button');
+        }, 150);
     }
 
     // 페르소나 변경
     async function changePersona(personaKey) {
-        let changed = false;
         try {
             if (!personaKey) {
                 console.log('[Chat Lobby] No persona selected');
@@ -643,33 +606,19 @@
                 if (typeof personasModule.setUserAvatar === 'function') {
                     await personasModule.setUserAvatar(personaKey);
                     console.log('[Chat Lobby] Persona changed via setUserAvatar');
-                    changed = true;
+                    return; // 성공하면 종료 - UI 새로고침 안 함 (깜빡임 방지)
                 }
             } catch (e) {
                 console.log('[Chat Lobby] Could not use setUserAvatar:', e);
             }
             
             // 폴백: SillyTavern context
-            if (!changed && typeof window.SillyTavern?.getContext?.()?.setUserAvatar === 'function') {
+            if (typeof window.SillyTavern?.getContext?.()?.setUserAvatar === 'function') {
                 await window.SillyTavern.getContext().setUserAvatar(personaKey);
                 console.log('[Chat Lobby] Persona changed via context');
-                changed = true;
-            }
-            
-            if (!changed) {
-                console.warn('[Chat Lobby] Persona change failed for:', personaKey);
             }
         } catch (error) {
             console.error('[Chat Lobby] Failed to change persona:', error);
-        }
-
-        // 변경 후 UI 동기화
-        if (changed) {
-            try {
-                await updatePersonaSelect();
-            } catch (err) {
-                console.error('[Chat Lobby] Failed to refresh persona list:', err);
-            }
         }
     }
 
@@ -966,14 +915,20 @@
         const charName = cardElement.querySelector('.lobby-char-name').textContent;
         const avatarSrc = cardElement.querySelector('.lobby-char-avatar').src;
 
-        // 채팅 패널 표시
+        // 채팅 패널 UI 요소들 표시
         const chatsPanel = document.getElementById('chat-lobby-chats');
         chatsPanel.classList.add('visible');
-
-        // 헤더 업데이트
-        document.getElementById('chat-panel-avatar').src = avatarSrc;
+        
+        // 헤더 요소들 표시
+        const avatarImg = document.getElementById('chat-panel-avatar');
+        avatarImg.style.display = 'block';
+        avatarImg.src = avatarSrc;
+        
         document.getElementById('chat-panel-name').textContent = charName;
         document.getElementById('chat-panel-count').textContent = '채팅 로딩 중...';
+        document.getElementById('chat-lobby-delete-char').style.display = 'block';
+        document.getElementById('chat-lobby-new-chat').style.display = 'block';
+        document.getElementById('chat-lobby-folder-bar').style.display = 'flex';
 
         // 새 채팅 버튼 데이터 설정
         document.getElementById('chat-lobby-new-chat').dataset.charIndex = charIndex;
@@ -1990,14 +1945,6 @@
         
         // FAB 버튼 클릭
         document.getElementById('chat-lobby-fab').addEventListener('click', openLobby);
-        
-        // 채팅 패널 닫기 버튼 (모바일용)
-        document.getElementById('chat-lobby-chats-close').addEventListener('click', () => {
-            const chatsPanel = document.getElementById('chat-lobby-chats');
-            if (chatsPanel) {
-                chatsPanel.classList.remove('visible');
-            }
-        });
         
         // 봇 프사 클릭 시 캐릭터 정보/편집 화면으로 이동 (설명, 인사말 등)
         document.getElementById('chat-panel-avatar').addEventListener('click', async () => {
