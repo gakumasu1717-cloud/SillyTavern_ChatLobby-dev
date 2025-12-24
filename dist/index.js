@@ -25,6 +25,7 @@
         sortOption: 'recent', // recent, created, name, favorites
         filterFolder: 'all', // all, favorites, 폴더id
         collapsedFolders: [], // 접힌 폴더 목록
+        charSortOption: 'recent', // recent, name, created, chats - 캐릭터 정렬 옵션
         autoFavoriteRules: {
             recentDays: 0, // 0 = 비활성화, 3 = 최근 3일 사용 시 자동 즐겨찾기
         }
@@ -140,6 +141,40 @@
         saveLobbyData(data);
     }
 
+    // 캐릭터 정렬 옵션 설정
+    function setCharSortOption(option) {
+        const data = loadLobbyData();
+        data.charSortOption = option;
+        saveLobbyData(data);
+    }
+
+    // 캐릭터별 채팅 수 캐시 (성능 최적화)
+    const chatCountCache = new Map();
+    let chatCountCacheTime = 0;
+    const CACHE_DURATION = 60000; // 1분
+
+    // 캐릭터별 채팅 수 가져오기
+    async function getCharacterChatCount(characterAvatar) {
+        // 캐시 확인
+        const now = Date.now();
+        if (now - chatCountCacheTime > CACHE_DURATION) {
+            chatCountCache.clear();
+            chatCountCacheTime = now;
+        }
+        if (chatCountCache.has(characterAvatar)) {
+            return chatCountCache.get(characterAvatar);
+        }
+        
+        try {
+            const chats = await loadChatsForCharacter(characterAvatar);
+            const count = Array.isArray(chats) ? chats.length : Object.keys(chats || {}).length;
+            chatCountCache.set(characterAvatar, count);
+            return count;
+        } catch (e) {
+            return 0;
+        }
+    }
+
     // 필터 폴더 설정
     function setFilterFolder(folderId) {
         const data = loadLobbyData();
@@ -207,6 +242,12 @@
                 </div>
                 <div id="chat-lobby-search">
                     <input type="text" id="chat-lobby-search-input" placeholder="캐릭터 검색...">
+                    <select id="chat-lobby-char-sort" title="캐릭터 정렬">
+                        <option value="recent">🕒 최근 채팅순</option>
+                        <option value="name">🔤 이름순</option>
+                        <option value="created">📅 생성일순</option>
+                        <option value="chats">💬 채팅 수</option>
+                    </select>
                 </div>
                 <div id="chat-lobby-content">
                     <div id="chat-lobby-characters">
@@ -394,12 +435,14 @@
                 avatarImg.style.cursor = 'pointer';
             }
             
-            // 이름 클릭 → 페르소나 선택
+            // 이름 클릭 → 페르소나 선택 (이미 선택된 경우 무시)
             const nameSpan = item.querySelector('.persona-name');
             if (nameSpan) {
                 nameSpan.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    // 이미 선택된 페르소나면 무시
+                    if (item.classList.contains('selected')) return;
                     container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                     item.classList.add('selected');
                     changePersona(item.dataset.persona);
@@ -407,11 +450,13 @@
                 nameSpan.style.cursor = 'pointer';
             }
             
-            // 전체 아이템 클릭 → 페르소나 선택 (삭제 버튼, 아바타 제외)
+            // 전체 아이템 클릭 → 페르소나 선택 (삭제 버튼, 아바타 제외, 이미 선택된 경우 무시)
             item.addEventListener('click', (e) => {
                 if (e.target.classList.contains('persona-delete-btn')) return;
                 if (e.target.classList.contains('persona-avatar')) return;
                 if (e.target.tagName === 'IMG') return; // img 태그도 제외
+                // 이미 선택된 페르소나면 무시
+                if (item.classList.contains('selected')) return;
                 container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
                 changePersona(item.dataset.persona);
@@ -677,6 +722,7 @@
                 </div>
             </div>
             <button class="chat-delete-btn" title="채팅 삭제">🗑️</button>
+            <div class="chat-tooltip" style="display:none;">${escapeHtml(truncateText(preview, 500))}</div>
         </div>
         `;
     }
@@ -717,13 +763,59 @@
             );
         }
         
-        // 캐릭터 정렬: 즐겨찾기 캐릭터만 최상단으로 (기본 순서 유지)
-        filtered.sort((a, b) => {
-            const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
-            const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
-            if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
-            return 0; // 즐겨찾기 외에는 원래 순서 유지
-        });
+        // 캐릭터 정렬 옵션 가져오기
+        const lobbyData = loadLobbyData();
+        const charSortOption = lobbyData.charSortOption || 'recent';
+        
+        // 정렬 드롭다운 값 업데이트
+        const sortSelect = document.getElementById('chat-lobby-char-sort');
+        if (sortSelect) sortSelect.value = charSortOption;
+        
+        // 캐릭터 정렬 (즐겨찾기 우선 + 선택된 정렬 기준)
+        if (charSortOption === 'name') {
+            // 이름순 정렬
+            filtered.sort((a, b) => {
+                const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
+                const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
+                if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+                return (a.name || '').localeCompare(b.name || '', 'ko');
+            });
+        } else if (charSortOption === 'created') {
+            // 생성일순 정렬 (최신 먼저)
+            filtered.sort((a, b) => {
+                const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
+                const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
+                if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+                const aDate = a.create_date || a.date_added || 0;
+                const bDate = b.create_date || b.date_added || 0;
+                return bDate - aDate;
+            });
+        } else if (charSortOption === 'chats') {
+            // 채팅 수 순 정렬 - 비동기로 처리
+            const chatCounts = await Promise.all(
+                filtered.map(async (char) => {
+                    const count = await getCharacterChatCount(char.avatar);
+                    return { char, count };
+                })
+            );
+            chatCounts.sort((a, b) => {
+                const aIsFav = !!(a.char.fav === true || a.char.fav === 'true' || a.char.data?.extensions?.fav);
+                const bIsFav = !!(b.char.fav === true || b.char.fav === 'true' || b.char.data?.extensions?.fav);
+                if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+                return b.count - a.count;
+            });
+            filtered = chatCounts.map(item => item.char);
+        } else {
+            // 최근 채팅순 (기본) - date_last_chat 기준
+            filtered.sort((a, b) => {
+                const aIsFav = !!(a.fav === true || a.fav === 'true' || a.data?.extensions?.fav);
+                const bIsFav = !!(b.fav === true || b.fav === 'true' || b.data?.extensions?.fav);
+                if (aIsFav !== bIsFav) return aIsFav ? -1 : 1;
+                const aDate = a.date_last_chat || a.last_mes || 0;
+                const bDate = b.date_last_chat || b.last_mes || 0;
+                return bDate - aDate;
+            });
+        }
 
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -1964,6 +2056,17 @@
             searchTimeout = setTimeout(() => {
                 updateCharacterGrid(e.target.value);
             }, 300);
+        });
+        
+        // 캐릭터 정렬 드롭다운 변경 이벤트
+        const charSortSelect = document.getElementById('chat-lobby-char-sort');
+        charSortSelect.addEventListener('change', (e) => {
+            const newSort = e.target.value;
+            console.log('[Chat Lobby] Character sort changed to:', newSort);
+            setCharSortOption(newSort);
+            // 현재 검색어 유지하면서 캐릭터 목록 새로고침
+            const currentSearch = searchInput.value;
+            updateCharacterGrid(currentSearch);
         });
 
         // ESC 키로 닫기
