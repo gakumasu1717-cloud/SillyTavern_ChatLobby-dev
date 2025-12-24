@@ -917,16 +917,6 @@
         const lobbyData = loadLobbyData();
         const charSortOption = sortOverride || lobbyData.charSortOption || 'recent';
         
-        // 드롭다운 UI 동기화
-        const sortSelect = document.getElementById('chat-lobby-char-sort');
-        if (sortSelect && sortSelect.value !== charSortOption) {
-            sortSelect.value = charSortOption;
-        }
-        
-        // 정렬 드롭다운 값 업데이트
-        const sortSelect = document.getElementById('chat-lobby-char-sort');
-        if (sortSelect) sortSelect.value = charSortOption;
-        
         // 캐릭터 정렬 (즐겨찾기 우선 + 선택된 정렬 기준)
         if (charSortOption === 'name') {
             // 이름순 정렬
