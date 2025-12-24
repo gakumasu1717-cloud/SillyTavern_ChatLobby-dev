@@ -503,30 +503,68 @@
     }
     
     // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
+    // ST-CustomTheme 호환성 개선
     async function openPersonaManagement() {
         console.log('[Chat Lobby] openPersonaManagement called');
         closeLobby();
         
-        // 딥레이 후 drawer-icon 클릭
+        // 다양한 방법으로 페르소나 관리 열기 시도
         setTimeout(() => {
-            // 페르소나 관리 drawer 내부의 drawer-icon 클릭 (스마일 이모지)
+            // 방법 1: ST-CustomTheme 햄버거 메뉴 모드 체크
+            const isHamburgerMode = document.body.classList.contains('st-menu-layout-hamburger');
+            const isSTCustomTheme = document.body.classList.contains('st-custom-theme-active');
+            
+            console.log('[Chat Lobby] ST-CustomTheme active:', isSTCustomTheme, 'Hamburger mode:', isHamburgerMode);
+            
+            // 방법 2: 페르소나 관리 drawer 찾기
             const personaDrawer = document.getElementById('persona-management-button');
+            
             if (personaDrawer) {
+                // ST-CustomTheme 사이드바에 있을 수 있음
+                const sidebarItem = document.querySelector('#st-custom-sidebar [data-btn-id="persona-management-button"]');
+                if (sidebarItem) {
+                    console.log('[Chat Lobby] Found in ST sidebar');
+                    sidebarItem.click();
+                    return;
+                }
+                
+                // 햄버거 드롭다운에 있을 수 있음
+                const hamburgerItem = document.querySelector('#st-hamburger-dropdown [data-btn-id="persona-management-button"]');
+                if (hamburgerItem) {
+                    console.log('[Chat Lobby] Found in hamburger dropdown');
+                    hamburgerItem.click();
+                    return;
+                }
+                
+                // 기본 drawer-icon 시도
                 const drawerIcon = personaDrawer.querySelector('.drawer-icon');
-                console.log('[Chat Lobby] drawer-icon:', drawerIcon);
                 if (drawerIcon) {
                     drawerIcon.click();
                     console.log('[Chat Lobby] Clicked drawer-icon');
-                } else {
-                    // fallback: drawer-toggle 클릭
-                    const drawerToggle = personaDrawer.querySelector('.drawer-toggle');
-                    if (drawerToggle) {
-                        drawerToggle.click();
-                        console.log('[Chat Lobby] Clicked drawer-toggle');
-                    }
+                    return;
                 }
+                
+                // fallback: drawer-toggle 클릭
+                const drawerToggle = personaDrawer.querySelector('.drawer-toggle');
+                if (drawerToggle) {
+                    drawerToggle.click();
+                    console.log('[Chat Lobby] Clicked drawer-toggle');
+                    return;
+                }
+                
+                // 최종 fallback: personaDrawer 자체 클릭
+                personaDrawer.click();
+                console.log('[Chat Lobby] Clicked personaDrawer directly');
             } else {
                 console.log('[Chat Lobby] persona-management-button not found');
+                
+                // ST-CustomTheme 사이드바에서 직접 찾기
+                const sidebarPersonaBtn = document.querySelector('.st-sidebar-item[data-btn-id="persona-management-button"]');
+                if (sidebarPersonaBtn) {
+                    sidebarPersonaBtn.click();
+                    console.log('[Chat Lobby] Clicked ST sidebar persona button');
+                }
+            }
             }
         }, 200);
     }
@@ -706,9 +744,12 @@
         
         // 메타 정보 구성 (메시지 수만)
         const metaInfo = messageCount > 0 ? `💬 ${messageCount}개` : '';
+        
+        // 툴팁용 긴 미리보기 (500자)
+        const tooltipPreview = truncateText(preview, 500);
 
         return `
-        <div class="lobby-chat-item ${favClass}" data-file-name="${escapeHtml(fileName)}" data-char-avatar="${safeAvatar}" data-chat-index="${chatIndex}" data-folder-id="${folderId}">
+        <div class="lobby-chat-item ${favClass}" data-file-name="${escapeHtml(fileName)}" data-char-avatar="${safeAvatar}" data-chat-index="${chatIndex}" data-folder-id="${folderId}" data-tooltip="${escapeHtml(tooltipPreview).replace(/"/g, '&quot;')}">
             <div class="chat-checkbox" style="display:none;">
                 <input type="checkbox" class="chat-select-cb">
             </div>
@@ -722,7 +763,10 @@
                 </div>
             </div>
             <button class="chat-delete-btn" title="채팅 삭제">🗑️</button>
-            <div class="chat-tooltip" style="display:none;">${escapeHtml(truncateText(preview, 500))}</div>
+            <div class="chat-tooltip">
+                <div class="chat-tooltip-header">📝 마지막 메시지</div>
+                <div class="chat-tooltip-content">${escapeHtml(tooltipPreview)}</div>
+            </div>
         </div>
         `;
     }
@@ -1752,7 +1796,46 @@
         return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
     }
 
-
+    // 툴팁 위치 계산 및 표시 (PC 전용)
+    function setupTooltipPositioning() {
+        const chatsList = document.getElementById('chat-lobby-chats-list');
+        if (!chatsList) return;
+        
+        // 마우스 이동 시 툴팁 위치 업데이트
+        chatsList.addEventListener('mousemove', (e) => {
+            const chatItem = e.target.closest('.lobby-chat-item');
+            if (!chatItem) return;
+            
+            const tooltip = chatItem.querySelector('.chat-tooltip');
+            if (!tooltip) return;
+            
+            // 화면 크기 체크 (PC만)
+            if (window.innerWidth <= 768) return;
+            
+            // 마우스 위치 기반으로 툴팁 위치 계산
+            const padding = 15;
+            let left = e.clientX + padding;
+            let top = e.clientY - 50;
+            
+            // 화면 오른쪽 넘어가면 왼쪽에 표시
+            if (left + 360 > window.innerWidth) {
+                left = e.clientX - 360 - padding;
+            }
+            
+            // 화면 아래로 넘어가면 위로 조정
+            if (top + 360 > window.innerHeight) {
+                top = window.innerHeight - 370;
+            }
+            
+            // 화면 위로 넘어가면 아래로 조정
+            if (top < 10) {
+                top = 10;
+            }
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        });
+    }
 
     // 초기화
     function init() {
@@ -1773,6 +1856,9 @@
         if (fab) {
             fab.style.display = 'flex';
         }
+        
+        // 툴팁 위치 계산 설정
+        setupTooltipPositioning();
 
         // 이벤트 리스너
         document.getElementById('chat-lobby-close').addEventListener('click', closeLobby);
