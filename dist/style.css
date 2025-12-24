@@ -342,18 +342,23 @@
     max-width: 100%;
 }
 
-/* 채팅 목록 패널 */
+/* 채팅 목록 패널 - 페르소나 바 + 캐릭터 그리드 위에 오버레이 */
 #chat-lobby-chats {
-    width: 50%;
-    min-width: 400px;
-    max-width: 600px;
+    position: fixed;
+    top: 60px; /* 헤더 바 높이 */
+    right: 0;
+    width: 45%;
+    min-width: 380px;
+    max-width: 550px;
+    height: calc(100vh - 60px); /* 헤더 제외한 전체 높이 */
     background: var(--SmartThemeBlurTintColor, rgba(25, 25, 25, 0.98));
     border-left: 1px solid var(--SmartThemeBorderColor, #444);
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    overflow: visible;
+    z-index: 2147483647; /* 최상위 z-index */
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4);
 }
 
 #chat-lobby-chats.visible {

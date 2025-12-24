@@ -9,6 +9,9 @@
     const extensionName = 'Chat Lobby';
     const extensionFolderPath = 'third-party/SillyTavern-ChatLobby';
     const STORAGE_KEY = 'chatLobby_data';
+    
+    // 페르소나 선택 상태 추적 (전역)
+    let isProcessingPersona = false;
 
     // ============================================
     // 폴더/분류 데이터 관리
@@ -425,23 +428,53 @@
             // 아바타 이미지 클릭 → 페르소나 관리 화면 (선택된 페르소나만)
             const avatarImg = item.querySelector('.persona-avatar');
             if (avatarImg) {
-                avatarImg.addEventListener('click', (e) => {
+                // 터치 이벤트도 처리
+                let avatarTouchHandled = false;
+                
+                const handleAvatarClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     
-                    // 선택된 페르소나의 아바타를 클릭했을 때만 관리 화면으로 이동
-                    if (item.classList.contains('selected')) {
+                    // 중복 처리 방지
+                    if (isProcessingPersona) {
+                        console.log('[Chat Lobby] Already processing persona action, ignoring');
+                        return false;
+                    }
+                    
+                    // 현재 실제로 selected 클래스가 있는지 다시 확인
+                    const isCurrentlySelected = item.classList.contains('selected');
+                    console.log('[Chat Lobby] Avatar clicked, isSelected:', isCurrentlySelected);
+                    
+                    if (isCurrentlySelected) {
                         console.log('[Chat Lobby] Selected persona avatar clicked, opening management');
                         openPersonaManagement();
                     } else {
                         // 선택되지 않은 페르소나 아바타 클릭 → 해당 페르소나 선택
                         console.log('[Chat Lobby] Unselected persona avatar clicked, selecting persona');
+                        isProcessingPersona = true;
                         container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                         item.classList.add('selected');
-                        changePersona(item.dataset.persona);
+                        changePersona(item.dataset.persona).finally(() => {
+                            isProcessingPersona = false;
+                        });
                     }
-                });
+                    return false;
+                };
+                
+                avatarImg.addEventListener('touchstart', () => { avatarTouchHandled = false; }, { passive: true });
+                avatarImg.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    avatarTouchHandled = true;
+                    handleAvatarClick(e);
+                }, { capture: true });
+                avatarImg.addEventListener('click', (e) => {
+                    if (!avatarTouchHandled) {
+                        handleAvatarClick(e);
+                    }
+                    avatarTouchHandled = false;
+                }, { capture: true });
                 avatarImg.style.cursor = 'pointer';
             }
             
@@ -453,9 +486,13 @@
                     e.stopPropagation();
                     // 이미 선택된 페르소나면 무시
                     if (item.classList.contains('selected')) return;
+                    if (isProcessingPersona) return;
+                    isProcessingPersona = true;
                     container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                     item.classList.add('selected');
-                    changePersona(item.dataset.persona);
+                    changePersona(item.dataset.persona).finally(() => {
+                        isProcessingPersona = false;
+                    });
                 });
                 nameSpan.style.cursor = 'pointer';
             }
@@ -467,9 +504,13 @@
                 if (e.target.tagName === 'IMG') return; // img 태그도 제외
                 // 이미 선택된 페르소나면 무시
                 if (item.classList.contains('selected')) return;
+                if (isProcessingPersona) return;
+                isProcessingPersona = true;
                 container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
-                changePersona(item.dataset.persona);
+                changePersona(item.dataset.persona).finally(() => {
+                    isProcessingPersona = false;
+                });
             });
         });
         
