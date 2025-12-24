@@ -422,15 +422,25 @@
         
         // 클릭 이벤트 - 페르소나 선택 / 아바타 클릭 시 페르소나 관리
         container.querySelectorAll('.persona-item').forEach(item => {
-            // 아바타 이미지 클릭 → 페르소나 관리 화면
+            // 아바타 이미지 클릭 → 페르소나 관리 화면 (선택된 페르소나만)
             const avatarImg = item.querySelector('.persona-avatar');
             if (avatarImg) {
                 avatarImg.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
-                    console.log('[Chat Lobby] Persona avatar clicked, opening management');
-                    openPersonaManagement();
+                    
+                    // 선택된 페르소나의 아바타를 클릭했을 때만 관리 화면으로 이동
+                    if (item.classList.contains('selected')) {
+                        console.log('[Chat Lobby] Selected persona avatar clicked, opening management');
+                        openPersonaManagement();
+                    } else {
+                        // 선택되지 않은 페르소나 아바타 클릭 → 해당 페르소나 선택
+                        console.log('[Chat Lobby] Unselected persona avatar clicked, selecting persona');
+                        container.querySelectorAll('.persona-item').forEach(el => el.classList.remove('selected'));
+                        item.classList.add('selected');
+                        changePersona(item.dataset.persona);
+                    }
                 });
                 avatarImg.style.cursor = 'pointer';
             }
@@ -1795,10 +1805,24 @@
         return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
     }
 
-    // 툴팁 위치 계산 및 표시 (PC 전용)
+    // 툴팁 위치 계산 및 표시 (PC 전용) - JS로 직접 제어
     function setupTooltipPositioning() {
         const chatsList = document.getElementById('chat-lobby-chats-list');
         if (!chatsList) return;
+        
+        // 마우스 진입 시 툴팁 표시
+        chatsList.addEventListener('mouseenter', (e) => {
+            const chatItem = e.target.closest('.lobby-chat-item');
+            if (!chatItem) return;
+            
+            // 모바일이면 무시
+            if (window.innerWidth <= 768) return;
+            
+            const tooltip = chatItem.querySelector('.chat-tooltip');
+            if (tooltip) {
+                tooltip.classList.add('show');
+            }
+        }, true);
         
         // 마우스 이동 시 툴팁 위치 업데이트
         chatsList.addEventListener('mousemove', (e) => {
@@ -1811,19 +1835,22 @@
             // 화면 크기 체크 (PC만)
             if (window.innerWidth <= 768) return;
             
+            // 툴팁 표시
+            tooltip.classList.add('show');
+            
             // 마우스 위치 기반으로 툴팁 위치 계산
-            const padding = 15;
+            const padding = 20;
             let left = e.clientX + padding;
-            let top = e.clientY - 50;
+            let top = e.clientY - 100;
             
             // 화면 오른쪽 넘어가면 왼쪽에 표시
-            if (left + 360 > window.innerWidth) {
-                left = e.clientX - 360 - padding;
+            if (left + 370 > window.innerWidth) {
+                left = e.clientX - 370 - padding;
             }
             
             // 화면 아래로 넘어가면 위로 조정
-            if (top + 360 > window.innerHeight) {
-                top = window.innerHeight - 370;
+            if (top + 370 > window.innerHeight) {
+                top = window.innerHeight - 380;
             }
             
             // 화면 위로 넘어가면 아래로 조정
@@ -1833,6 +1860,31 @@
             
             tooltip.style.left = left + 'px';
             tooltip.style.top = top + 'px';
+        });
+        
+        // 마우스 떠날 때 툴팁 숨기기
+        chatsList.addEventListener('mouseleave', (e) => {
+            const chatItem = e.target.closest('.lobby-chat-item');
+            if (!chatItem) return;
+            
+            const tooltip = chatItem.querySelector('.chat-tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('show');
+            }
+        }, true);
+        
+        // 개별 아이템에서 마우스 나갈 때도 숨기기
+        chatsList.addEventListener('mouseout', (e) => {
+            const chatItem = e.target.closest('.lobby-chat-item');
+            const relatedItem = e.relatedTarget?.closest('.lobby-chat-item');
+            
+            // 다른 아이템으로 이동하거나 리스트 밖으로 나갈 때
+            if (chatItem && chatItem !== relatedItem) {
+                const tooltip = chatItem.querySelector('.chat-tooltip');
+                if (tooltip) {
+                    tooltip.classList.remove('show');
+                }
+            }
         });
     }
 

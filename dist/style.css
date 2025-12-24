@@ -344,13 +344,16 @@
 
 /* 채팅 목록 패널 */
 #chat-lobby-chats {
-    width: 380px;
+    width: 50%;
+    min-width: 400px;
+    max-width: 600px;
     background: var(--SmartThemeBlurTintColor, rgba(25, 25, 25, 0.98));
     border-left: 1px solid var(--SmartThemeBorderColor, #444);
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
     transition: transform 0.3s ease;
+    overflow: visible;
 }
 
 #chat-lobby-chats.visible {
@@ -1176,7 +1179,7 @@
 }
 
 .chat-tooltip {
-    display: none;
+    display: none !important;
     position: fixed;
     width: 350px;
     max-height: 350px;
@@ -1195,6 +1198,10 @@
     pointer-events: none;
 }
 
+.chat-tooltip.show {
+    display: block !important;
+}
+
 .chat-tooltip-header {
     font-weight: 600;
     color: var(--SmartThemeQuoteColor, #6a9fb5);
@@ -1208,11 +1215,9 @@
     color: var(--SmartThemeBodyColor, #ccc);
 }
 
-/* PC에서만 툴팁 표시 */
+/* PC에서만 툴팁 표시 - JS로 제어 */
 @media (min-width: 769px) {
-    .lobby-chat-item:hover .chat-tooltip {
-        display: block;
-    }
+    /* 툴팁은 JS로 .show 클래스 추가해서 표시 */
 }
 
 /* 모바일에서는 툴팁 숨김 */
