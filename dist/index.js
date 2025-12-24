@@ -563,18 +563,11 @@
     }
     
     // 페르소나 관리 화면으로 이동 (페르소나 아바타 클릭 시)
-    // ST-CustomTheme이 있으면 사이드바 버튼을 찾아 클릭, 없으면 drawer-icon 클릭
+    // ST-CustomTheme이 있으면 사이드바 버튼을 찾아 클릭, 없으면 drawer-toggle 클릭
     async function openPersonaManagement() {
         console.log('[Chat Lobby] === openPersonaManagement START ===' );
         
-        // 디버그: 현재 DOM 상태 출력
         const personaDrawer = document.getElementById('persona-management-button');
-        console.log('[Chat Lobby] #persona-management-button exists:', !!personaDrawer);
-        if (personaDrawer) {
-            console.log('[Chat Lobby] drawer-toggle:', !!personaDrawer.querySelector('.drawer-toggle'));
-            console.log('[Chat Lobby] drawer-icon:', !!personaDrawer.querySelector('.drawer-icon'));
-            console.log('[Chat Lobby] drawer-content:', !!personaDrawer.querySelector('.drawer-content'));
-        }
         
         // ST-CustomTheme 사이드바 버튼 체크
         const stSidebarSelectors = [
@@ -583,49 +576,45 @@
             '#persona-management-button.custom-sidebar-btn'
         ];
         
-        console.log('[Chat Lobby] Checking ST-CustomTheme sidebar buttons...');
+        let stButton = null;
         for (const sel of stSidebarSelectors) {
-            const btn = document.querySelector(sel);
-            console.log(`[Chat Lobby] ${sel}:`, !!btn);
-        }
-        
-        // 먼저 로비를 닫음
-        closeLobby();
-        
-        // 약간 지연 후 페르소나 관리 열기
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        let clicked = false;
-        
-        // ST-CustomTheme 사이드바 버튼 시도
-        for (const selector of stSidebarSelectors) {
-            const sidebarBtn = document.querySelector(selector);
-            if (sidebarBtn) {
-                console.log('[Chat Lobby] Clicking ST-CustomTheme button:', selector);
-                sidebarBtn.click();
-                clicked = true;
+            stButton = document.querySelector(sel);
+            if (stButton) {
+                console.log('[Chat Lobby] Found ST-CustomTheme button:', sel);
                 break;
             }
         }
         
-        // 기본 drawer 사용
-        if (!clicked && personaDrawer) {
-            // drawer-icon 먼저 시도
-            const drawerIcon = personaDrawer.querySelector('.drawer-icon');
+        // 로비 닫기
+        closeLobby();
+        
+        // 지연 후 클릭
+        await new Promise(resolve => setTimeout(resolve, 250));
+        
+        if (stButton) {
+            console.log('[Chat Lobby] Clicking ST-CustomTheme sidebar button');
+            stButton.click();
+        } else if (personaDrawer) {
+            // drawer-toggle 클릭 (drawer-icon은 작동 안 함)
             const drawerToggle = personaDrawer.querySelector('.drawer-toggle');
-            
-            if (drawerIcon) {
-                console.log('[Chat Lobby] Clicking drawer-icon');
-                drawerIcon.click();
-                clicked = true;
-            } else if (drawerToggle) {
-                console.log('[Chat Lobby] Clicking drawer-toggle (fallback)');
+            if (drawerToggle) {
+                console.log('[Chat Lobby] Clicking drawer-toggle');
                 drawerToggle.click();
-                clicked = true;
+                
+                // 클릭 후 drawer가 열렸는지 확인
+                setTimeout(() => {
+                    const drawerContent = personaDrawer.querySelector('.drawer-content');
+                    const isOpen = drawerContent && window.getComputedStyle(drawerContent).display !== 'none';
+                    console.log('[Chat Lobby] Drawer opened:', isOpen);
+                }, 100);
+            } else {
+                console.warn('[Chat Lobby] drawer-toggle not found');
             }
+        } else {
+            console.warn('[Chat Lobby] No persona management button found');
         }
 
-        console.log('[Chat Lobby] === openPersonaManagement END, clicked:', clicked, '===');
+        console.log('[Chat Lobby] === openPersonaManagement END ===');
     }
 
     // 페르소나 변경
